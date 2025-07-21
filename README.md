@@ -16,7 +16,7 @@ Esta prueba busca evaluar la capacidad de la persona de forma básica para proce
 
 ### 1️⃣ PARTE 1 – Análisis de texto con modelo de lenguaje
 
-Se entregarán uno o varios archivos `.csv` que contienen datos relacionados con alimentación y nutrición en Colombia. El objetivo es que, a partir de estos datos, la persona candidata diseñe un flujo que permita:
+En el repositorio se encuentran uno o varios archivos `.xlsx` que contienen datos relacionados con alimentación y nutrición en Colombia. El objetivo es que, a partir de estos datos, la persona candidata diseñe un flujo que permita:
 
 - Recibir preguntas formuladas en lenguaje natural (por ejemplo: *¿Cuáles fueron los departamentos con mayor inseguridad alimentaria en 2023?*, *¿Qué tendencia se observa en el acceso a programas de alimentación escolar?*) y entregar respuestas automáticas basadas en los datos.
 - Generar un resumen general con insights principales derivados de los datos.
@@ -26,7 +26,7 @@ Se entregarán uno o varios archivos `.csv` que contienen datos relacionados con
 
 ### Archivos de entrada
 
-Se entregarán como insumo uno o más archivos `.csv` con estructuras similares a las siguientes columnas:
+En el repositorio se encuentran como insumo uno o más archivos `.xlsx` con estructuras similares a las siguientes columnas en la carpeta `data`:
 
 ```
 departamento, municipio, año, indicador, valor, unidad
