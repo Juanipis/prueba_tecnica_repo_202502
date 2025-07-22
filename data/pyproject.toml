@@ -1,0 +1,35 @@
+[tool.poetry]
+name = "etl-inseguridad-alimentaria"
+version = "0.1.0"
+description = "ETL para normalización de datos de inseguridad alimentaria en Colombia"
+authors = ["Your Name <your.email@example.com>"]
+readme = "README.md"
+packages = [{include = "etl_inseguridad", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+pandas = "^2.0.0"
+openpyxl = "^3.1.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.0.0"
+black = "^23.0.0"
+isort = "^5.12.0"
+flake8 = "^6.0.0"
+
+[tool.poetry.scripts]
+etl-extract = "etl_inseguridad.extract:main"
+etl-transform = "etl_inseguridad.transform:main" 
+etl-load = "etl_inseguridad.load:main"
+etl-run = "etl_inseguridad.main:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+target-version = ['py39']
+
+[tool.isort]
+profile = "black" 

@@ -1,0 +1,28 @@
+# ===========================================
+# ETL Data Gitignore
+# ===========================================
+
+# Ignore all generated data files with timestamps
+curated/
+processed/
+
+# Ignore all timestamped SQLite databases but keep the latest one
+sqlite_databases/inseguridad_alimentaria_*.db
+!sqlite_databases/inseguridad_alimentaria_latest.db
+
+# Python cache
+src/**/__pycache__/
+src/**/*.pyc
+src/**/*.pyo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# Logs
+*.log 
