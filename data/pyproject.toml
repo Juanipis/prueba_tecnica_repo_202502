@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "etl-inseguridad-alimentaria"
+name = "data"
 version = "0.1.0"
 description = "ETL para normalización de datos de inseguridad alimentaria en Colombia"
 authors = ["Your Name <your.email@example.com>"]

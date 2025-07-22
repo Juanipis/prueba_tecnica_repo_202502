@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Analista AI - Inseguridad Alimentaria Colombia</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        color: #333;
+        overflow-x: hidden;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 40px;
+        color: white;
+        animation: fadeInDown 1s ease-out;
+      }
+
+      .header h1 {
+        font-size: 3rem;
+        margin-bottom: 10px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      .header p {
+        font-size: 1.2rem;
+        opacity: 0.9;
+      }
+
+      .main-panel {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(10px);
+        animation: fadeInUp 1s ease-out;
+      }
+
+      .query-section {
+        margin-bottom: 30px;
+      }
+
+      .query-section h2 {
+        color: #667eea;
+        margin-bottom: 20px;
+        font-size: 1.5rem;
+      }
+
+      .input-group {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+
+      .question-input {
+        flex: 1;
+        min-width: 300px;
+        padding: 15px 20px;
+        border: 2px solid #e1e5e9;
+        border-radius: 12px;
+        font-size: 16px;
+        transition: all 0.3s ease;
+        background: white;
+      }
+
+      .question-input:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      }
+
+      .ask-button {
+        padding: 15px 30px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        min-width: 120px;
+        white-space: nowrap;
+      }
+
+      .ask-button:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+      }
+
+      .ask-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .examples-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+      }
+
+      .example-card {
+        background: linear-gradient(135deg, #f8f9ff 0%, #e8ebff 100%);
+        padding: 15px;
+        border-radius: 10px;
+        border: 1px solid #e1e5e9;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .example-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        border-color: #667eea;
+      }
+
+      .example-card h4 {
+        color: #667eea;
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        font-weight: 600;
+      }
+
+      .example-card p {
+        color: #555;
+        font-size: 0.95rem;
+        line-height: 1.4;
+      }
+
+      .status-bar {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+
+      .status-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.9rem;
+      }
+
+      .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+      }
+
+      .status-ok {
+        background: #28a745;
+      }
+      .status-error {
+        background: #dc3545;
+      }
+      .status-warning {
+        background: #ffc107;
+      }
+
+      .result-section {
+        margin-top: 30px;
+      }
+
+      .result-content {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 25px;
+        border-left: 5px solid #667eea;
+        animation: slideIn 0.5s ease-out;
+      }
+
+      .result-content h3 {
+        color: #667eea;
+        margin-bottom: 15px;
+        font-size: 1.3rem;
+      }
+
+      .result-text {
+        line-height: 1.6;
+        color: #555;
+      }
+
+      .result-text h1,
+      .result-text h2,
+      .result-text h3 {
+        color: #333;
+        margin: 20px 0 10px 0;
+      }
+
+      .result-text table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 15px 0;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .result-text th,
+      .result-text td {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 1px solid #e1e5e9;
+      }
+
+      .result-text th {
+        background: #667eea;
+        color: white;
+        font-weight: 600;
+      }
+
+      .result-text tr:hover {
+        background: #f8f9ff;
+      }
+
+      .result-text code {
+        background: #e9ecef;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: "Courier New", monospace;
+      }
+
+      .result-text pre {
+        background: #f1f3f4;
+        padding: 15px;
+        border-radius: 8px;
+        overflow-x: auto;
+        margin: 15px 0;
+      }
+
+      .loading {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #667eea;
+        font-weight: 500;
+      }
+
+      .spinner {
+        width: 20px;
+        height: 20px;
+        border: 2px solid #e1e5e9;
+        border-top: 2px solid #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      .error-message {
+        background: #f8d7da;
+        color: #721c24;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #f5c6cb;
+        margin: 15px 0;
+      }
+
+      .success-message {
+        background: #d4edda;
+        color: #155724;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #c3e6cb;
+        margin: 15px 0;
+      }
+
+      @keyframes fadeInDown {
+        from {
+          opacity: 0;
+          transform: translateY(-30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateX(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          padding: 15px;
+        }
+        .header h1 {
+          font-size: 2rem;
+        }
+        .input-group {
+          flex-direction: column;
+        }
+        .question-input {
+          min-width: auto;
+        }
+        .examples-grid {
+          grid-template-columns: 1fr;
+        }
+        .status-bar {
+          flex-direction: column;
+          align-items: stretch;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🤖 Analista AI</h1>
+        <p>Análisis inteligente de inseguridad alimentaria en Colombia</p>
+      </div>
+
+      <div class="main-panel">
+        <!-- Estado del Sistema -->
+        <div class="status-bar" id="statusBar">
+          <div class="status-item">
+            <div class="status-indicator status-warning" id="agentStatus"></div>
+            <span>SmolAgent</span>
+          </div>
+          <div class="status-item">
+            <div class="status-indicator status-warning" id="dbStatus"></div>
+            <span>Base de Datos</span>
+          </div>
+          <div class="status-item">
+            <div class="status-indicator status-warning" id="apiStatus"></div>
+            <span>API Gemini</span>
+          </div>
+          <div class="status-item">
+            <div
+              class="status-indicator status-warning"
+              id="systemStatus"
+            ></div>
+            <span id="systemText">Verificando sistema...</span>
+          </div>
+        </div>
+
+        <!-- Sección de Consulta -->
+        <div class="query-section">
+          <h2>💬 Haz tu pregunta al Analista AI</h2>
+
+          <div class="input-group">
+            <input
+              type="text"
+              class="question-input"
+              id="questionInput"
+              placeholder="Ej: ¿Qué departamentos tienen mayor inseguridad alimentaria en 2022?"
+              maxlength="500"
+            />
+            <button
+              class="ask-button"
+              id="askButton"
+              onclick="analyzeQuestion()"
+            >
+              <span id="buttonText">Analizar</span>
+            </button>
+          </div>
+
+          <!-- Ejemplos de Preguntas -->
+          <h3 style="color: #667eea; margin-bottom: 15px">
+            💡 Ejemplos de preguntas:
+          </h3>
+          <div class="examples-grid">
+            <div
+              class="example-card"
+              onclick="useExample('¿Cuál es la situación de inseguridad alimentaria en Colombia?')"
+            >
+              <h4>📊 Situación General</h4>
+              <p>
+                ¿Cuál es la situación de inseguridad alimentaria en Colombia?
+              </p>
+            </div>
+            <div
+              class="example-card"
+              onclick="useExample('¿Qué departamentos tienen mayor inseguridad alimentaria grave en 2022?')"
+            >
+              <h4>🏆 Rankings</h4>
+              <p>
+                ¿Qué departamentos tienen mayor inseguridad alimentaria grave en
+                2022?
+              </p>
+            </div>
+            <div
+              class="example-card"
+              onclick="useExample('Compara la evolución de inseguridad alimentaria entre Antioquia y Cundinamarca')"
+            >
+              <h4>📈 Comparaciones</h4>
+              <p>Compara la evolución entre Antioquia y Cundinamarca</p>
+            </div>
+            <div
+              class="example-card"
+              onclick="useExample('¿Cuáles son las estadísticas descriptivas de inseguridad moderada en 2023?')"
+            >
+              <h4>📐 Estadísticas</h4>
+              <p>
+                ¿Cuáles son las estadísticas descriptivas de inseguridad
+                moderada en 2023?
+              </p>
+            </div>
+            <div
+              class="example-card"
+              onclick="useExample('Muestra los 5 municipios con mayor inseguridad alimentaria en Antioquia')"
+            >
+              <h4>🌍 Por Región</h4>
+              <p>
+                Muestra los 5 municipios con mayor inseguridad alimentaria en
+                Antioquia
+              </p>
+            </div>
+            <div
+              class="example-card"
+              onclick="useExample('¿Cómo ha evolucionado la inseguridad alimentaria en los últimos años?')"
+            >
+              <h4>⏰ Evolución Temporal</h4>
+              <p>
+                ¿Cómo ha evolucionado la inseguridad alimentaria en los últimos
+                años?
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Resultados -->
+        <div class="result-section" id="resultSection" style="display: none">
+          <div class="result-content">
+            <h3>🔍 Resultado del Análisis</h3>
+            <div class="result-text" id="resultText"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Variables globales
+      let isAnalyzing = false;
+
+      // Inicializar la aplicación
+      document.addEventListener("DOMContentLoaded", function () {
+        checkSystemStatus();
+        setupEventListeners();
+      });
+
+      function setupEventListeners() {
+        // Enter key en el input
+        document
+          .getElementById("questionInput")
+          .addEventListener("keypress", function (e) {
+            if (e.key === "Enter" && !isAnalyzing) {
+              analyzeQuestion();
+            }
+          });
+      }
+
+      // Verificar estado del sistema
+      async function checkSystemStatus() {
+        try {
+          const response = await fetch("/status");
+          const status = await response.json();
+
+          updateStatusIndicator("agentStatus", status.agent_available);
+          updateStatusIndicator("dbStatus", status.components.database);
+          updateStatusIndicator("apiStatus", status.components.api_key);
+          updateStatusIndicator("systemStatus", status.system_ready);
+
+          document.getElementById("systemText").textContent =
+            status.system_ready ? "Sistema Listo" : "Sistema con Problemas";
+        } catch (error) {
+          console.error("Error verificando estado:", error);
+          updateAllStatusIndicators(false);
+          document.getElementById("systemText").textContent =
+            "Error de Conexión";
+        }
+      }
+
+      function updateStatusIndicator(elementId, isOk) {
+        const element = document.getElementById(elementId);
+        element.className = `status-indicator ${
+          isOk ? "status-ok" : "status-error"
+        }`;
+      }
+
+      function updateAllStatusIndicators(isOk) {
+        ["agentStatus", "dbStatus", "apiStatus", "systemStatus"].forEach(
+          (id) => {
+            updateStatusIndicator(id, isOk);
+          }
+        );
+      }
+
+      // Usar ejemplo de pregunta
+      function useExample(question) {
+        document.getElementById("questionInput").value = question;
+        document.getElementById("questionInput").focus();
+      }
+
+      // Función principal de análisis
+      async function analyzeQuestion() {
+        const questionInput = document.getElementById("questionInput");
+        const question = questionInput.value.trim();
+
+        if (!question) {
+          showMessage(
+            "Por favor, escribe una pregunta antes de analizar.",
+            "error"
+          );
+          return;
+        }
+
+        if (isAnalyzing) return;
+
+        setLoadingState(true);
+
+        try {
+          const response = await fetch("/analyze", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ question: question }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            displayResult(data);
+            if (data.success) {
+              showMessage("Análisis completado exitosamente.", "success");
+            } else {
+              showMessage(
+                "El análisis se completó con algunos problemas. Revisa los resultados.",
+                "warning"
+              );
+            }
+          } else {
+            throw new Error(data.detail || "Error en el análisis");
+          }
+        } catch (error) {
+          console.error("Error:", error);
+          showMessage(
+            `Error al realizar el análisis: ${error.message}`,
+            "error"
+          );
+        } finally {
+          setLoadingState(false);
+        }
+      }
+
+      // Configurar estado de carga
+      function setLoadingState(loading) {
+        isAnalyzing = loading;
+        const button = document.getElementById("askButton");
+        const buttonText = document.getElementById("buttonText");
+
+        if (loading) {
+          button.disabled = true;
+          buttonText.innerHTML = '<div class="spinner"></div> Analizando...';
+          button.style.minWidth = "140px";
+        } else {
+          button.disabled = false;
+          buttonText.textContent = "Analizar";
+          button.style.minWidth = "120px";
+        }
+      }
+
+      // Mostrar resultado
+      function displayResult(data) {
+        const resultSection = document.getElementById("resultSection");
+        const resultText = document.getElementById("resultText");
+
+        // Convertir Markdown a HTML básico
+        let htmlContent = markdownToHtml(data.analysis);
+
+        resultText.innerHTML = htmlContent;
+        resultSection.style.display = "block";
+
+        // Scroll suave al resultado
+        resultSection.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }
+
+      // Convertir Markdown básico a HTML
+      function markdownToHtml(markdown) {
+        return (
+          markdown
+            // Headers
+            .replace(/^### (.*$)/gm, "<h3>$1</h3>")
+            .replace(/^## (.*$)/gm, "<h2>$1</h2>")
+            .replace(/^# (.*$)/gm, "<h1>$1</h1>")
+            // Bold
+            .replace(/\*\*(.*)\*\*/g, "<strong>$1</strong>")
+            // Code blocks
+            .replace(/```([\s\S]*?)```/g, "<pre><code>$1</code></pre>")
+            // Inline code
+            .replace(/`([^`]+)`/g, "<code>$1</code>")
+            // Line breaks
+            .replace(/\n\n/g, "</p><p>")
+            .replace(/\n/g, "<br>")
+            // Wrap in paragraphs
+            .replace(/^(.+)/gm, "<p>$1</p>")
+            // Tables (básico)
+            .replace(/\|([^|]+)\|/g, function (match, content) {
+              const cells = content.split("|").map((cell) => cell.trim());
+              return (
+                "<tr>" +
+                cells.map((cell) => `<td>${cell}</td>`).join("") +
+                "</tr>"
+              );
+            })
+        );
+      }
+
+      // Mostrar mensajes
+      function showMessage(message, type) {
+        // Remover mensajes anteriores
+        const existingMessages = document.querySelectorAll(
+          ".error-message, .success-message, .warning-message"
+        );
+        existingMessages.forEach((msg) => msg.remove());
+
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `${type}-message`;
+        messageDiv.textContent = message;
+
+        const querySection = document.querySelector(".query-section");
+        querySection.appendChild(messageDiv);
+
+        // Auto-remover después de 5 segundos
+        setTimeout(() => {
+          if (messageDiv.parentNode) {
+            messageDiv.remove();
+          }
+        }, 5000);
+      }
+
+      // Verificar estado periódicamente
+      setInterval(checkSystemStatus, 30000); // Cada 30 segundos
+    </script>
+  </body>
+</html>
