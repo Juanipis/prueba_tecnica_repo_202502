@@ -260,6 +260,7 @@ async def analyze_question(request: QuestionRequest):
     3. Ejecuta análisis estadísticos si es necesario
     4. Se autocorrige si hay errores
     5. Genera respuesta estructurada en Markdown
+    6. Las imágenes se manejan de manera token-eficiente
     """
     if not food_security_agent:
         raise HTTPException(
@@ -268,17 +269,50 @@ async def analyze_question(request: QuestionRequest):
         )
     
     try:
+        # Limpiar almacenamiento de imágenes previo
+        from core.sql_tools import clear_stored_images, get_stored_images
+        clear_stored_images()
+        
         # Ejecutar análisis con el agente
         analysis = food_security_agent.analyze_question(request.question)
+        
+        # Obtener imágenes generadas durante el análisis
+        stored_images = get_stored_images()
+        
+        # Si hay imágenes, inyectarlas en el markdown
+        if stored_images:
+            print(f"🖼️ Inyectando {len(stored_images)} imágenes en la respuesta")
+            # Crear sección de visualizaciones si no existe
+            if "## 📈 Visualizaciones" not in analysis and "📈 Visualizaciones Generadas" not in analysis:
+                analysis += "\n\n## 📈 Visualizaciones Generadas\n\n"
+            
+            # Inyectar cada imagen en el markdown
+            for image_id, image_info in stored_images.items():
+                title = image_info['title']
+                image_data = image_info['data']
+                chart_type = image_info['type']
+                
+                print(f"  📊 {title} ({chart_type}) - {len(image_data)} caracteres")
+                
+                # Agregar imagen al markdown
+                analysis += f"\n### {title}\n"
+                analysis += f"![{title}]({image_data})\n\n"
+        
+        # Limpiar almacenamiento temporal
+        clear_stored_images()
         
         return AnalysisResponse(
             question=request.question,
             analysis=analysis,
-            agent_used="SmolAgent CodeAgent with Gemini",
+            agent_used="SmolAgent CodeAgent with Gemini (Token-Optimized)",
             success=True
         )
         
     except Exception as e:
+        # Limpiar almacenamiento en caso de error
+        from core.sql_tools import clear_stored_images
+        clear_stored_images()
+        
         # En caso de error, aún intentar devolver información útil
         error_analysis = food_security_agent._generate_error_response(str(e), request.question) if food_security_agent else f"Error: {str(e)}"
         
@@ -405,6 +439,13 @@ async def get_examples():
             "¿Cómo ha evolucionado la inseguridad alimentaria en Colombia?",
             "Muestra la tendencia temporal para Bogotá",
             "¿En qué años hubo mayor inseguridad alimentaria?"
+        ],
+        "visualizaciones": [
+            "Crea una gráfica de barras que muestre los 10 departamentos con mayor inseguridad alimentaria grave en 2022",
+            "Analiza con gráficas la distribución de inseguridad alimentaria por regiones en Colombia",
+            "Haz un análisis completo con visualizaciones de la evolución temporal",
+            "Genera múltiples gráficas: una de barras por departamento y otra circular por regiones",
+            "Crea un histograma de la distribución de inseguridad moderada en 2023"
         ]
     }
     

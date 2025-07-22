@@ -6,6 +6,7 @@ Este módulo configura un CodeAgent que puede:
 - Realizar análisis estadísticos con pandas y numpy
 - Autocorregirse si las consultas son incorrectas
 - Iterar hasta obtener resultados correctos
+- Crear visualizaciones con matplotlib
 """
 
 import os
@@ -23,7 +24,10 @@ from .sql_tools import (
     get_available_years,
     get_available_indicators,
     get_entities_by_level,
-    quick_summary
+    quick_summary,
+    create_chart_visualization,
+    create_multiple_charts,
+    analyze_and_visualize
 )
 
 
@@ -72,7 +76,10 @@ class InseguridadAlimentariaAgent:
             get_available_years,
             get_available_indicators,
             get_entities_by_level,
-            quick_summary
+            quick_summary,
+            create_chart_visualization,
+            create_multiple_charts,
+            analyze_and_visualize
         ]
         
         agent_config = self.settings.agent
@@ -141,8 +148,21 @@ HERRAMIENTAS DISPONIBLES:
 - get_top_entities: Para rankings de entidades
 - compare_years: Para análisis temporal
 - calculate_statistics: Para estadísticas descriptivas
+- create_chart_visualization: Para crear gráficas individuales con matplotlib
+- create_multiple_charts: Para crear múltiples gráficas
+- analyze_and_visualize: Para análisis completo con gráficas automáticas
 
-INSTRUCCIONES:
+INSTRUCCIONES PARA VISUALIZACIONES:
+1. SIEMPRE incluye gráficas cuando sea apropiado para mostrar datos
+2. Usa create_chart_visualization para gráficas específicas
+3. Usa analyze_and_visualize para análisis completos con visualizaciones automáticas
+4. Los tipos de gráficas disponibles son: bar, line, pie, scatter, histogram
+5. Las herramientas son TOKEN-EFICIENTES: solo retornan confirmaciones cortas
+6. Las gráficas se almacenan temporalmente y aparecen automáticamente en el frontend
+7. NO esperes recibir imágenes base64 en las respuestas de las herramientas
+8. Incluye títulos descriptivos y especifica columnas para mejor visualización
+
+INSTRUCCIONES GENERALES:
 1. SIEMPRE empieza explorando la base de datos si no estás seguro del esquema
 2. Usa consultas SQL precisas y bien estructuradas
 3. Si una consulta falla, analiza el error y corrígela

@@ -9,6 +9,7 @@ Aplicación FastAPI con SmolAgents para análisis inteligente de datos de insegu
 - **Configuración Tipada**: Sistema de configuración robusto con pydantic-settings
 - **SQL Dinámico**: El agente escribe consultas SQL según las preguntas del usuario
 - **Análisis Estadístico**: Integración con pandas, numpy y matplotlib
+- **Visualizaciones Automáticas**: Genera gráficas con matplotlib integradas en el frontend
 - **Autocorrección**: Si una consulta falla, el agente la corrige automáticamente
 
 ## 📦 Instalación
@@ -109,6 +110,14 @@ uvicorn main:app --reload --host 127.0.0.1 --port 8000
 - **get_entities_by_level**: Entidades por nivel geográfico
 - **quick_summary**: Resumen rápido
 
+### 📊 Herramientas de Visualización (NUEVO - Token-Eficiente)
+
+- **create_chart_visualization**: Crea gráficas individuales (bar, line, pie, scatter, histogram)
+- **create_multiple_charts**: Genera múltiples gráficas en una sola consulta
+- **analyze_and_visualize**: Análisis completo con visualizaciones automáticas
+
+**🚀 Sistema Token-Eficiente**: Las herramientas NO retornan imágenes base64 al agente (evita consumir tokens masivamente). Las imágenes se almacenan temporalmente y se inyectan solo en la respuesta final al frontend.
+
 ### Ejemplos de Preguntas
 
 ```
@@ -129,6 +138,15 @@ uvicorn main:app --reload --host 127.0.0.1 --port 8000
 
 # Temporal
 "¿Cómo ha evolucionado la inseguridad alimentaria en los últimos años?"
+
+# Visualizaciones (NUEVO)
+"Crea una gráfica de barras que muestre los 10 departamentos con mayor inseguridad alimentaria grave en 2022"
+
+"Analiza con gráficas la distribución de inseguridad alimentaria por regiones en Colombia"
+
+"Haz un análisis completo con visualizaciones de la evolución temporal de inseguridad alimentaria"
+
+"Genera múltiples gráficas: una de barras por departamento y otra circular por regiones"
 ```
 
 ## 🛠️ Desarrollo
@@ -282,6 +300,34 @@ pip install pydantic-settings>=2.5.2
 poetry add pydantic-settings
 ```
 
+## 📊 Visualizaciones con Matplotlib
+
+### Cómo Funciona
+
+El SmolAgent ahora puede **generar gráficas automáticamente** usando matplotlib:
+
+1. **Gráficas Automáticas**: Solo pide "analiza con gráficas" y el agente decide qué visualizar
+2. **Gráficas Específicas**: Especifica el tipo: "crea una gráfica de barras de..."
+3. **Múltiples Gráficas**: Genera varias visualizaciones en una sola consulta
+4. **Integración Perfecta**: Las gráficas aparecen directamente en el frontend
+
+### Tipos de Gráficas Disponibles
+
+- **bar**: Gráficas de barras para comparaciones
+- **line**: Gráficas de líneas para evolución temporal
+- **pie**: Gráficas circulares para proporciones
+- **scatter**: Diagramas de dispersión para correlaciones
+- **histogram**: Histogramas para distribuciones
+
+### Ejemplos de Uso
+
+```
+"Crea una gráfica de barras con los departamentos con mayor inseguridad alimentaria"
+"Analiza con histograma la distribución de los valores de inseguridad"
+"Haz una gráfica circular que muestre la proporción por regiones"
+"Genera un análisis completo con múltiples visualizaciones automáticas"
+```
+
 ## 📊 Base de Datos
 
 ### Esquema
@@ -321,10 +367,8 @@ Si estás migrando desde la versión anterior:
    - `SERVER_*` para servidor FastAPI
    - `LOG_*` para logging
 
-
 ## 📝 Licencia
 
 Este proyecto está bajo la licencia MIT. Ver `LICENSE` para más detalles.
-
 
 Powered by **FastAPI** + **SmolAgents** + **LiteLLM** + **Gemini AI** + **Pydantic Settings**

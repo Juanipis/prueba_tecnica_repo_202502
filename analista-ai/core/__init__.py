@@ -11,7 +11,12 @@ from .sql_tools import (
     get_available_years,
     get_available_indicators,
     get_entities_by_level,
-    quick_summary
+    quick_summary,
+    create_chart_visualization,
+    create_multiple_charts,
+    analyze_and_visualize,
+    get_stored_images,
+    clear_stored_images
 )
 
 __all__ = [
@@ -27,5 +32,10 @@ __all__ = [
     'get_available_years',
     'get_available_indicators',
     'get_entities_by_level',
-    'quick_summary'
+    'quick_summary',
+    'create_chart_visualization',
+    'create_multiple_charts',
+    'analyze_and_visualize',
+    'get_stored_images',
+    'clear_stored_images'
 ] 

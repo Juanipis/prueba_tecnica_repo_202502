@@ -5,6 +5,7 @@ Este módulo contiene las herramientas que el agente puede usar para:
 - Consultar la base de datos SQLite
 - Realizar análisis estadísticos
 - Generar insights sobre los datos
+- Crear visualizaciones con matplotlib (token-eficiente)
 """
 
 import sqlite3
@@ -13,14 +14,48 @@ import numpy as np
 from pathlib import Path
 from typing import List, Dict, Any
 from smolagents import tool
-
+import base64
+from io import BytesIO
+import uuid
 
 # Ruta a la base de datos - se importará dinámicamente
 from .settings import get_settings
 
+# Storage temporal para imágenes (token-eficiente)
+_image_storage = {}
+
 def get_db_path() -> str:
     """Obtiene la ruta de la base de datos desde la configuración."""
     return str(get_settings().database.db_path)
+
+def _store_image(image_base64: str, title: str, chart_type: str) -> str:
+    """
+    Almacena una imagen base64 temporalmente y retorna un ID.
+    
+    Args:
+        image_base64: String base64 de la imagen
+        title: Título de la gráfica
+        chart_type: Tipo de gráfica
+        
+    Returns:
+        ID único para referenciar la imagen
+    """
+    image_id = str(uuid.uuid4())[:8]
+    _image_storage[image_id] = {
+        'data': image_base64,
+        'title': title,
+        'type': chart_type
+    }
+    return image_id
+
+def get_stored_images() -> Dict[str, Dict[str, str]]:
+    """Obtiene todas las imágenes almacenadas temporalmente."""
+    return _image_storage.copy()
+
+def clear_stored_images():
+    """Limpia el almacenamiento temporal de imágenes."""
+    global _image_storage
+    _image_storage.clear()
 
 
 @tool
@@ -558,3 +593,276 @@ def calculate_statistics(indicador: str, año: int, nivel: str = "Departamental"
         
     except Exception as e:
         return f"Error calculando estadísticas: {str(e)}" 
+
+
+@tool
+def create_chart_visualization(query: str, chart_type: str = "bar", title: str = "", 
+                              x_column: str = "", y_column: str = "", 
+                              figsize_width: int = 10, figsize_height: int = 6) -> str:
+    """
+    Crea una visualización usando matplotlib a partir de una consulta SQL.
+    
+    IMPORTANTE: Esta función es token-eficiente. No retorna la imagen base64 directamente
+    para evitar consumir tokens innecesariamente. La imagen se almacena temporalmente.
+    
+    Args:
+        query: Consulta SQL que retornará los datos para visualizar
+        chart_type: Tipo de gráfica ("bar", "line", "pie", "scatter", "histogram")
+        title: Título de la gráfica
+        x_column: Nombre de la columna para el eje X (si aplica)
+        y_column: Nombre de la columna para el eje Y (si aplica) 
+        figsize_width: Ancho de la figura en pulgadas
+        figsize_height: Alto de la figura en pulgadas
+        
+    Returns:
+        Mensaje corto confirmando la creación (NO la imagen base64)
+    """
+    try:
+        # Importar matplotlib sin pyplot para evitar memory leaks
+        from matplotlib.figure import Figure
+        import matplotlib.pyplot as plt
+        plt.style.use('default')  # Estilo limpio
+        
+        # Ejecutar consulta y cargar datos
+        db_path = get_db_path()
+        with sqlite3.connect(db_path) as conn:
+            df = pd.read_sql_query(query, conn)
+        
+        if df.empty:
+            return "Error: No se encontraron datos para visualizar."
+            
+        # Crear figura usando Figure() directamente (recomendado para web)
+        fig = Figure(figsize=(figsize_width, figsize_height))
+        ax = fig.subplots()
+        
+        # Detectar columnas automáticamente si no se especifican
+        if not x_column and len(df.columns) >= 1:
+            x_column = df.columns[0]
+        if not y_column and len(df.columns) >= 2:
+            y_column = df.columns[1]
+        elif not y_column and len(df.columns) == 1:
+            y_column = df.columns[0]
+            
+        # Crear diferentes tipos de gráficas
+        if chart_type.lower() == "bar":
+            if x_column and y_column and x_column in df.columns and y_column in df.columns:
+                ax.bar(df[x_column], df[y_column])
+                ax.set_xlabel(x_column)
+                ax.set_ylabel(y_column)
+            else:
+                return f"Error: Columnas {x_column} o {y_column} no encontradas en los datos."
+                
+        elif chart_type.lower() == "line":
+            if x_column and y_column and x_column in df.columns and y_column in df.columns:
+                ax.plot(df[x_column], df[y_column], marker='o')
+                ax.set_xlabel(x_column)
+                ax.set_ylabel(y_column)
+            else:
+                return f"Error: Columnas {x_column} o {y_column} no encontradas en los datos."
+                
+        elif chart_type.lower() == "pie":
+            if y_column and y_column in df.columns:
+                # Para pie chart, usar la primera columna como labels si existe
+                labels = df[x_column] if x_column and x_column in df.columns else df.index
+                ax.pie(df[y_column], labels=labels, autopct='%1.1f%%')
+            else:
+                return f"Error: Columna {y_column} no encontrada en los datos."
+                
+        elif chart_type.lower() == "scatter":
+            if x_column and y_column and x_column in df.columns and y_column in df.columns:
+                ax.scatter(df[x_column], df[y_column])
+                ax.set_xlabel(x_column)
+                ax.set_ylabel(y_column)
+            else:
+                return f"Error: Columnas {x_column} o {y_column} no encontradas en los datos."
+                
+        elif chart_type.lower() == "histogram":
+            if y_column and y_column in df.columns:
+                ax.hist(df[y_column], bins=20, edgecolor='black', alpha=0.7)
+                ax.set_xlabel(y_column)
+                ax.set_ylabel('Frecuencia')
+            else:
+                return f"Error: Columna {y_column} no encontrada en los datos."
+        else:
+            return f"Error: Tipo de gráfica '{chart_type}' no soportado. Use: bar, line, pie, scatter, histogram"
+        
+        # Configurar título y layout
+        if title:
+            ax.set_title(title, fontsize=14, fontweight='bold')
+        
+        # Rotar labels del eje X si son muchos o muy largos
+        if chart_type.lower() in ["bar", "line"] and x_column in df.columns:
+            if len(df[x_column]) > 10 or any(len(str(x)) > 8 for x in df[x_column]):
+                ax.tick_params(axis='x', rotation=45)
+        
+        # Mejorar el layout
+        fig.tight_layout()
+        
+        # Guardar en buffer de memoria como PNG
+        buf = BytesIO()
+        fig.savefig(buf, format='png', dpi=150, bbox_inches='tight')
+        buf.seek(0)
+        
+        # Convertir a base64
+        img_base64 = base64.b64encode(buf.getvalue()).decode('ascii')
+        buf.close()
+        
+        # Limpiar memoria
+        fig.clear()
+        
+        # CLAVE: Almacenar imagen temporalmente, NO retornarla al agente
+        image_id = _store_image(f"data:image/png;base64,{img_base64}", title or f"Gráfica {chart_type}", chart_type)
+        
+        # Retornar solo mensaje corto (token-eficiente)
+        return f"✅ Gráfica {chart_type} creada exitosamente: '{title}' (ID: {image_id})"
+        
+    except ImportError as e:
+        return f"Error: matplotlib no disponible: {str(e)}"
+    except Exception as e:
+        return f"Error creando visualización: {str(e)}"
+
+
+@tool
+def create_multiple_charts(query: str, chart_configs: str) -> str:
+    """
+    Crea múltiples visualizaciones a partir de una consulta SQL.
+    
+    IMPORTANTE: Token-eficiente - no retorna imágenes base64 directamente.
+    
+    Args:
+        query: Consulta SQL que retornará los datos
+        chart_configs: String JSON con configuraciones de múltiples gráficas
+                      Ejemplo: '[{"type":"bar","title":"Gráfica 1","x":"col1","y":"col2"},{"type":"pie","title":"Gráfica 2","y":"col3"}]'
+        
+    Returns:
+        Resumen de gráficas creadas (NO las imágenes base64)
+    """
+    try:
+        import json
+        
+        # Parsear configuraciones
+        configs = json.loads(chart_configs)
+        
+        # Ejecutar consulta una sola vez
+        db_path = get_db_path()
+        with sqlite3.connect(db_path) as conn:
+            df = pd.read_sql_query(query, conn)
+        
+        if df.empty:
+            return "Error: No se encontraron datos para visualizar."
+        
+        results = []
+        
+        for i, config in enumerate(configs):
+            chart_type = config.get('type', 'bar')
+            title = config.get('title', f'Gráfica {i+1}')
+            x_col = config.get('x', '')
+            y_col = config.get('y', '')
+            
+            # Crear gráfica individual usando la query original
+            result = create_chart_visualization(
+                query=query,
+                chart_type=chart_type,
+                title=title,
+                x_column=x_col,
+                y_column=y_col
+            )
+            
+            results.append(f"- {result}")
+        
+        return f"✅ {len(configs)} gráficas creadas:\n" + "\n".join(results)
+        
+    except json.JSONDecodeError:
+        return "Error: chart_configs debe ser un JSON válido"
+    except Exception as e:
+        return f"Error creando múltiples visualizaciones: {str(e)}"
+
+
+@tool
+def analyze_and_visualize(query: str, analysis_type: str = "complete") -> str:
+    """
+    Realiza análisis completo con estadísticas y visualizaciones automáticas.
+    
+    IMPORTANTE: Token-eficiente - almacena imágenes temporalmente.
+    
+    Args:
+        query: Consulta SQL para analizar
+        analysis_type: Tipo de análisis ("complete", "basic", "charts_only")
+        
+    Returns:
+        Análisis de texto + confirmación de gráficas creadas
+    """
+    try:
+        # Ejecutar consulta
+        db_path = get_db_path()
+        with sqlite3.connect(db_path) as conn:
+            df = pd.read_sql_query(query, conn)
+        
+        if df.empty:
+            return "No se encontraron datos para analizar."
+        
+        result = "# ANÁLISIS COMPLETO CON VISUALIZACIONES\n\n"
+        
+        if analysis_type in ["complete", "basic"]:
+            # Análisis estadístico
+            result += "## 📊 Estadísticas Descriptivas\n\n"
+            
+            numeric_cols = df.select_dtypes(include=[np.number]).columns
+            if len(numeric_cols) > 0:
+                stats = df[numeric_cols].describe()
+                result += "```\n" + stats.to_string() + "\n```\n\n"
+            
+            result += f"- **Total registros**: {len(df)}\n"
+            result += f"- **Columnas**: {list(df.columns)}\n\n"
+        
+        if analysis_type in ["complete", "charts_only"]:
+            # Generar visualizaciones automáticas
+            result += "## 📈 Visualizaciones Generadas\n\n"
+            
+            numeric_cols = df.select_dtypes(include=[np.number]).columns
+            categorical_cols = df.select_dtypes(include=['object']).columns
+            
+            created_charts = []
+            
+            # Gráfica 1: Bar chart si hay categorías y números
+            if len(categorical_cols) > 0 and len(numeric_cols) > 0:
+                chart_result = create_chart_visualization(
+                    query=query,
+                    chart_type="bar",
+                    title=f"Distribución por {categorical_cols[0]}",
+                    x_column=categorical_cols[0],
+                    y_column=numeric_cols[0]
+                )
+                created_charts.append(f"- {chart_result}")
+            
+            # Gráfica 2: Histograma de la primera columna numérica
+            if len(numeric_cols) > 0:
+                chart_result = create_chart_visualization(
+                    query=query,
+                    chart_type="histogram",
+                    title=f"Distribución de {numeric_cols[0]}",
+                    y_column=numeric_cols[0]
+                )
+                created_charts.append(f"- {chart_result}")
+            
+            # Gráfica 3: Pie chart si hay pocas categorías
+            if len(categorical_cols) > 0 and len(numeric_cols) > 0:
+                unique_categories = df[categorical_cols[0]].nunique()
+                if unique_categories <= 10:  # Solo si no hay demasiadas categorías
+                    chart_result = create_chart_visualization(
+                        query=query,
+                        chart_type="pie",
+                        title=f"Proporción por {categorical_cols[0]}",
+                        x_column=categorical_cols[0],
+                        y_column=numeric_cols[0]
+                    )
+                    created_charts.append(f"- {chart_result}")
+            
+            if created_charts:
+                result += "\n".join(created_charts) + "\n\n"
+        
+        result += "---\n*Análisis generado automáticamente por SmolAgent con matplotlib*"
+        return result
+        
+    except Exception as e:
+        return f"Error en análisis y visualización: {str(e)}" 

@@ -289,6 +289,54 @@
         margin: 15px 0;
       }
 
+      /* Estilos para gráficas */
+      .chart-container {
+        margin: 20px 0;
+        text-align: center;
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e1e5e9;
+      }
+
+      .chart-image {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+      }
+
+      .chart-image:hover {
+        transform: scale(1.02);
+        cursor: pointer;
+      }
+
+      .chart-caption {
+        margin: 10px 0 0 0;
+        font-size: 0.9rem;
+        color: #666;
+        font-style: italic;
+        font-weight: 500;
+      }
+
+      /* Mejoras para el contenido de resultados */
+      .result-text img {
+        max-width: 100%;
+        height: auto;
+        margin: 15px 0;
+        border-radius: 8px;
+      }
+
+      /* Estilos para hacer las gráficas responsivas */
+      .chart-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 20px;
+        margin: 20px 0;
+      }
+
       @keyframes fadeInDown {
         from {
           opacity: 0;
@@ -477,6 +525,26 @@
                 años?
               </p>
             </div>
+            <div
+              class="example-card"
+              onclick="useExample('Crea una gráfica de barras que muestre los 10 departamentos con mayor inseguridad alimentaria grave en 2022')"
+            >
+              <h4>📊 Visualizaciones</h4>
+              <p>
+                Crea una gráfica de barras que muestre los 10 departamentos con
+                mayor inseguridad alimentaria grave
+              </p>
+            </div>
+            <div
+              class="example-card"
+              onclick="useExample('Analiza con gráficas la distribución de inseguridad alimentaria por regiones en Colombia')"
+            >
+              <h4>📈 Análisis Visual</h4>
+              <p>
+                Analiza con gráficas la distribución de inseguridad alimentaria
+                por regiones
+              </p>
+            </div>
           </div>
         </div>
 
@@ -642,33 +710,98 @@
 
       // Convertir Markdown básico a HTML
       function markdownToHtml(markdown) {
-        return (
-          markdown
-            // Headers
-            .replace(/^### (.*$)/gm, "<h3>$1</h3>")
-            .replace(/^## (.*$)/gm, "<h2>$1</h2>")
-            .replace(/^# (.*$)/gm, "<h1>$1</h1>")
-            // Bold
-            .replace(/\*\*(.*)\*\*/g, "<strong>$1</strong>")
-            // Code blocks
-            .replace(/```([\s\S]*?)```/g, "<pre><code>$1</code></pre>")
-            // Inline code
-            .replace(/`([^`]+)`/g, "<code>$1</code>")
-            // Line breaks
-            .replace(/\n\n/g, "</p><p>")
-            .replace(/\n/g, "<br>")
-            // Wrap in paragraphs
-            .replace(/^(.+)/gm, "<p>$1</p>")
-            // Tables (básico)
-            .replace(/\|([^|]+)\|/g, function (match, content) {
-              const cells = content.split("|").map((cell) => cell.trim());
-              return (
-                "<tr>" +
-                cells.map((cell) => `<td>${cell}</td>`).join("") +
-                "</tr>"
-              );
-            })
+        // Primero, crear marcadores temporales para proteger el contenido HTML
+        let processedMarkdown = markdown;
+        const protectedElements = [];
+
+        // 1. Proteger bloques de código
+        processedMarkdown = processedMarkdown.replace(
+          /```([\s\S]*?)```/g,
+          function (match, content) {
+            const index = protectedElements.length;
+            protectedElements.push(`<pre><code>${content}</code></pre>`);
+            return `__PROTECTED_${index}__`;
+          }
         );
+
+        // 2. Proteger imágenes (incluyendo base64)
+        processedMarkdown = processedMarkdown.replace(
+          /!\[([^\]]*)\]\(([^)]+)\)/g,
+          function (match, alt, src) {
+            const index = protectedElements.length;
+            if (src.startsWith("data:image/")) {
+              protectedElements.push(`<div class="chart-container">
+              <img src="${src}" alt="${alt}" class="chart-image" />
+              <p class="chart-caption">${alt}</p>
+            </div>`);
+            } else {
+              protectedElements.push(`<img src="${src}" alt="${alt}" />`);
+            }
+            return `__PROTECTED_${index}__`;
+          }
+        );
+
+        // 3. Procesar headers
+        processedMarkdown = processedMarkdown
+          .replace(/^### (.*$)/gm, "<h3>$1</h3>")
+          .replace(/^## (.*$)/gm, "<h2>$1</h2>")
+          .replace(/^# (.*$)/gm, "<h1>$1</h1>");
+
+        // 4. Procesar texto en negrita
+        processedMarkdown = processedMarkdown.replace(
+          /\*\*(.*?)\*\*/g,
+          "<strong>$1</strong>"
+        );
+
+        // 5. Procesar código inline
+        processedMarkdown = processedMarkdown.replace(
+          /`([^`]+)`/g,
+          "<code>$1</code>"
+        );
+
+        // 6. Procesar párrafos (cuidando de no romper los elementos protegidos)
+        processedMarkdown = processedMarkdown
+          .split("\n\n")
+          .map((paragraph) => {
+            paragraph = paragraph.trim();
+            if (!paragraph) return "";
+
+            // No envolver en <p> si ya contiene HTML de bloque o elementos protegidos
+            if (
+              paragraph.match(/^<h[1-6]>/) ||
+              paragraph.match(/^<pre>/) ||
+              paragraph.match(/^<div/) ||
+              paragraph.match(/^__PROTECTED_\d+__$/)
+            ) {
+              return paragraph;
+            }
+
+            return `<p>${paragraph.replace(/\n/g, "<br>")}</p>`;
+          })
+          .join("\n");
+
+        // 7. Restaurar elementos protegidos
+        protectedElements.forEach((element, index) => {
+          processedMarkdown = processedMarkdown.replace(
+            `__PROTECTED_${index}__`,
+            element
+          );
+        });
+
+        // 8. Procesar tablas (básico)
+        processedMarkdown = processedMarkdown.replace(
+          /\|([^|]+)\|/g,
+          function (match, content) {
+            const cells = content.split("|").map((cell) => cell.trim());
+            return (
+              "<tr>" +
+              cells.map((cell) => `<td>${cell}</td>`).join("") +
+              "</tr>"
+            );
+          }
+        );
+
+        return processedMarkdown;
       }
 
       // Mostrar mensajes
