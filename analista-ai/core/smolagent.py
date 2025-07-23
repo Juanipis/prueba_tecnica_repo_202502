@@ -27,8 +27,14 @@ from .sql_tools import (
     analyze_and_visualize,
     format_web_citation,
     create_sources_section,
+    create_complete_references_section,
 )
-from .rag_tools import search_food_security_documents, get_rag_system_status
+from .rag_tools import (
+    search_food_security_documents,
+    get_rag_system_status,
+    create_rag_sources_section,
+    clear_rag_sources,
+)
 
 
 class InseguridadAlimentariaAgent:
@@ -97,10 +103,13 @@ class InseguridadAlimentariaAgent:
             analyze_and_visualize,  # Análisis completo con gráficas
             # Herramientas de fuentes y documentación
             format_web_citation,  # Formateo de citas
-            create_sources_section,  # Sección de fuentes
+            create_sources_section,  # Sección de fuentes web
+            create_complete_references_section,  # Sección completa de referencias (web + RAG)
             # Herramientas RAG (Retrieval-Augmented Generation)
             search_food_security_documents,  # Búsqueda en documentos especializados
             get_rag_system_status,  # Estado del sistema RAG
+            create_rag_sources_section,  # Crear sección de referencias RAG
+            clear_rag_sources,  # Limpiar fuentes RAG de la sesión
         ]
 
         # Agregar herramienta de búsqueda web si está disponible
@@ -224,12 +233,15 @@ HERRAMIENTAS DISPONIBLES:
 
 📚 DOCUMENTACIÓN:
 - format_web_citation: Formateo de citas en estilo APA
-- create_sources_section: Secciones de fuentes bien formateadas
+- create_sources_section: Secciones de fuentes web bien formateadas
+- create_complete_references_section: **NUEVA** - Sección unificada de todas las referencias (web + RAG)
 - WebSearchTool: {web_search_status} - Para información contextual complementaria
 
 🔍 RAG (RETRIEVAL-AUGMENTED GENERATION):
 - search_food_security_documents: Búsqueda semántica en documentos especializados sobre seguridad alimentaria
 - get_rag_system_status: Verificar estado del sistema RAG y base de datos vectorial
+- create_rag_sources_section: Crear sección automática de referencias RAG al final del análisis
+- clear_rag_sources: Limpiar fuentes RAG registradas para nueva consulta
 
 STATUS DEL SISTEMA RAG: {"✅ Habilitado" if self.settings.rag.enable_rag else "❌ Deshabilitado"}
 
@@ -241,6 +253,7 @@ NOTA IMPORTANTE SOBRE RAG:
   * Programas gubernamentales e intervenciones
   * Estudios especializados y reportes técnicos
   * Conceptos técnicos y definiciones oficiales
+- Las fuentes RAG se registran automáticamente y pueden mostrarse con create_rag_sources_section
 - Esta información complementa perfectamente tus análisis de datos cuantitativos
 - Combina datos estadísticos (SQL) con conocimiento especializado (RAG) para análisis completos
 
@@ -292,10 +305,12 @@ INSTRUCCIONES OBLIGATORIAS:
 - Estructura tu respuesta en Markdown claro
 
 ✅ CITAS Y FUENTES:
-- Si usas búsquedas web, usa SOLO la herramienta create_sources_section al final
-- NO crees manualmente secciones "Fuentes Consultadas" - usa la herramienta
+- Para TODAS las fuentes (web + RAG), usa preferiblemente create_complete_references_section al final
+- Alternativamente: create_sources_section para solo fuentes web, create_rag_sources_section para solo RAG
+- NO crees manualmente secciones "Fuentes Consultadas" o "Referencias"
 - Formato APA automático para todas las fuentes web
-- Separa claramente datos locales de información web
+- Las fuentes RAG se registran automáticamente cuando usas search_food_security_documents
+- Separa claramente datos locales, información web y documentos especializados RAG
 
 ✅ PALABRAS CLAVE INTELIGENTES:
 - AL FINAL de tu análisis, incluye una sección "## 🏷️ Palabras Clave"
@@ -335,11 +350,11 @@ REGLAS CRÍTICAS:
 ❌ NUNCA asumas nombres de tablas específicas
 ❌ NUNCA uses queries hardcodeadas  
 ❌ NUNCA hagas suposiciones sobre la estructura de datos
-❌ NUNCA crees manualmente secciones "Fuentes Consultadas"
+❌ NUNCA crees manualmente secciones "Fuentes Consultadas" o "Referencias"
 ✅ SIEMPRE explora primero con get_database_schema
 ✅ SIEMPRE construye queries dinámicamente
 ✅ SIEMPRE adapta tu análisis al tipo de datos encontrado
-✅ USA create_sources_section para fuentes web (evita duplicados)
+✅ USA create_complete_references_section para unificar fuentes web y RAG automáticamente
 
 PREGUNTA DEL USUARIO:
 """
