@@ -8,7 +8,7 @@ con validación automática y soporte para múltiples fuentes de configuración.
 from pathlib import Path
 from typing import Optional, List, Literal
 from pydantic_settings import BaseSettings
-from pydantic import Field, validator
+from pydantic import Field, field_validator
 
 
 class DatabaseSettings(BaseSettings):
@@ -16,7 +16,7 @@ class DatabaseSettings(BaseSettings):
 
     # Ruta por defecto relativa al backend
     db_path: Path = Field(
-        default="../data/sqlite_databases/inseguridad_alimentaria_latest.db",
+        default=Path("../data/sqlite_databases/inseguridad_alimentaria_latest.db"),
         description="Ruta a la base de datos SQLite",
     )
 
@@ -26,7 +26,8 @@ class DatabaseSettings(BaseSettings):
     )
     max_retries: int = Field(default=3, description="Máximo número de reintentos")
 
-    @validator("db_path")
+    @field_validator("db_path")
+    @classmethod
     def validate_db_exists(cls, v):
         """Valida que la base de datos exista."""
         if not Path(v).exists():
@@ -52,7 +53,8 @@ class DatabaseContextSettings(BaseSettings):
         default=3000, gt=0, description="Longitud máxima del contexto en caracteres"
     )
 
-    @validator("context_file_path")
+    @field_validator("context_file_path")
+    @classmethod
     def validate_context_file_exists(cls, v):
         """Valida que el archivo de contexto exista."""
         if not Path(v).exists():
@@ -105,7 +107,8 @@ class APISettings(BaseSettings):
         default=4000, gt=0, description="Máximo número de tokens en la respuesta"
     )
 
-    @validator("gemini_api_key")
+    @field_validator("gemini_api_key")
+    @classmethod
     def validate_gemini_key(cls, v):
         """Valida que la API key de Gemini esté configurada."""
         if not v or v == "TU_API_KEY_DE_GEMINI_AQUI":
@@ -190,7 +193,7 @@ class RAGSettings(BaseSettings):
 
     # Configuración de la base de datos vectorial
     vector_db_path: Path = Field(
-        default="../data/rag/vector_db_faiss/",
+        default=Path("../data/rag/vector_db_faiss/"),
         description="Ruta a la base de datos vectorial FAISS",
     )
 
@@ -228,7 +231,8 @@ class RAGSettings(BaseSettings):
         description="Umbral mínimo de similitud para considerar un documento relevante",
     )
 
-    @validator("vector_db_path")
+    @field_validator("vector_db_path")
+    @classmethod
     def validate_vector_db_path(cls, v):
         """Valida que la ruta de la base de datos vectorial exista."""
         if not Path(v).exists():
