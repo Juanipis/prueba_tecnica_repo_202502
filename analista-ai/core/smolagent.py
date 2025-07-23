@@ -170,7 +170,7 @@ INSTRUCCIONES GENERALES:
 5. Presenta los resultados en formato Markdown estructurado
 6. Incluye contexto y interpretación de los datos
 7. Si los datos son limitados, menciona las limitaciones
-
+8. TODAS LAS PREGUNTAS DEBEN SER ENFOCADAS EN EL ANÁLISIS DE INSEGURIDAD ALIMENTARIA EN COLOMBIA,  NO SE DEBEN HACER PREGUNTAS QUE NO SEAN RELACIONADAS CON LA INSEGURIDAD ALIMENTARIA EN COLOMBIA. SI HACES UNA PREGUNTA QUE NO SEA RELACIONADA CON LA INSEGURIDAD ALIMENTARIA EN COLOMBIA, SE RECHAZA LA PREGUNTA.
 PREGUNTA DEL USUARIO:
 """
         return context + question
@@ -195,7 +195,7 @@ PREGUNTA DEL USUARIO:
 Este análisis fue generado usando consultas SQL directas sobre la base de datos normalizada de inseguridad alimentaria de Colombia, con análisis estadísticos usando pandas y numpy.
 
 ---
-*Generado por SmolAgent especializado en datos de inseguridad alimentaria*
+*Generado por el Analista AI especializado en datos de inseguridad alimentaria, puede cometer errores, por favor verifica la respuesta y corrige los errores.*
 """
         return formatted
     
@@ -222,9 +222,6 @@ Este análisis fue generado usando consultas SQL directas sobre la base de datos
 - "¿Cómo evolucionó la inseguridad alimentaria en Antioquia?"
 - "¿Cuáles son las estadísticas descriptivas de inseguridad alimentaria moderada en 2023?"
 
-## Estado del Sistema
-- Base de datos: {'✅ Disponible' if os.path.exists('../data/sqlite_databases/inseguridad_alimentaria_latest.db') else '❌ No encontrada'}
-- API Gemini: {'✅ Configurada' if os.getenv('GEMINI_API_KEY') and os.getenv('GEMINI_API_KEY') != 'TU_API_KEY_DE_GEMINI_AQUI' else '❌ No configurada'}
 
 ---
 *Por favor, verifica la configuración e intenta nuevamente*
