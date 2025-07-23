@@ -9,10 +9,11 @@ Este módulo configura un CodeAgent que puede:
 - Iterar hasta obtener resultados correctos
 - Crear visualizaciones con matplotlib
 - Buscar información complementaria en internet usando DuckDuckGo
+- Acceder a documentos especializados usando RAG (Retrieval-Augmented Generation)
 """
 
 import os
-from typing import Dict, Any, List
+from typing import Dict, Any
 from smolagents import CodeAgent, LiteLLMModel, WebSearchTool
 from .settings import get_settings
 from .sql_tools import (
@@ -25,21 +26,22 @@ from .sql_tools import (
     create_multiple_charts,
     analyze_and_visualize,
     format_web_citation,
-    create_sources_section
+    create_sources_section,
 )
+from .rag_tools import search_food_security_documents, get_rag_system_status
 
 
 class InseguridadAlimentariaAgent:
     """
     Agente especializado en análisis de datos de inseguridad alimentaria en Colombia.
-    
+
     Utiliza SmolAgents con LiteLLM para conectar con Gemini y generar análisis
     inteligentes usando consultas SQL flexibles, análisis estadísticos, y búsquedas web.
-    
+
     El agente puede crear sus propias consultas SQL para cualquier análisis requerido,
     lo que lo hace flexible y adaptable a cambios en la estructura de la base de datos.
     """
-    
+
     def __init__(self):
         self.settings = get_settings()
         self.model = None
@@ -48,7 +50,7 @@ class InseguridadAlimentariaAgent:
         self._initialize_web_search()
         self._initialize_model()
         self._initialize_agent()
-    
+
     def _initialize_web_search(self):
         """Inicializa la herramienta de búsqueda web con DuckDuckGo."""
         try:
@@ -57,12 +59,15 @@ class InseguridadAlimentariaAgent:
         except Exception as e:
             print(f"⚠️ Error inicializando búsqueda web: {e}")
             self.web_search_tool = None
-    
+
     def _initialize_model(self):
         """Inicializa el modelo LiteLLM con Gemini usando configuración tipada."""
         api_config = self.settings.api
-        
-        if not api_config.gemini_api_key or api_config.gemini_api_key == "TU_API_KEY_DE_GEMINI_AQUI":
+
+        if (
+            not api_config.gemini_api_key
+            or api_config.gemini_api_key == "TU_API_KEY_DE_GEMINI_AQUI"
+        ):
             print("⚠️ Advertencia: GEMINI_API_KEY no configurada correctamente")
             print("🔧 Configura tu API key en el archivo .env")
             # Usar modelo por defecto para testing
@@ -72,53 +77,59 @@ class InseguridadAlimentariaAgent:
                 model_id=api_config.gemini_model,
                 api_key=api_config.gemini_api_key,
                 temperature=api_config.gemini_temperature,
-                max_tokens=api_config.gemini_max_tokens
+                max_tokens=api_config.gemini_max_tokens,
             )
-    
+
     def _initialize_agent(self):
         """Inicializa el CodeAgent con las herramientas esenciales y flexibles."""
         # Herramientas esenciales - flexibles y adaptables
         tools = [
             # Herramientas principales para acceso a datos
-            sql_query,                          # Consultas SQL flexibles 
-            get_database_schema,                # Exploración de estructura
-            analyze_data_pandas,                # Análisis estadístico avanzado
-            
+            sql_query,  # Consultas SQL flexibles
+            get_database_schema,  # Exploración de estructura
+            analyze_data_pandas,  # Análisis estadístico avanzado
             # Herramientas de presentación y formato
-            create_formatted_table,             # Tablas básicas
-            create_formatted_markdown_table,    # Tablas Markdown correctas
-            
+            create_formatted_table,  # Tablas básicas
+            create_formatted_markdown_table,  # Tablas Markdown correctas
             # Herramientas de visualización
-            create_chart_visualization,         # Gráficas individuales
-            create_multiple_charts,             # Múltiples gráficas
-            analyze_and_visualize,              # Análisis completo con gráficas
-            
+            create_chart_visualization,  # Gráficas individuales
+            create_multiple_charts,  # Múltiples gráficas
+            analyze_and_visualize,  # Análisis completo con gráficas
             # Herramientas de fuentes y documentación
-            format_web_citation,                # Formateo de citas
-            create_sources_section              # Sección de fuentes
+            format_web_citation,  # Formateo de citas
+            create_sources_section,  # Sección de fuentes
+            # Herramientas RAG (Retrieval-Augmented Generation)
+            search_food_security_documents,  # Búsqueda en documentos especializados
+            get_rag_system_status,  # Estado del sistema RAG
         ]
-        
+
         # Agregar herramienta de búsqueda web si está disponible
         if self.web_search_tool:
             tools.append(self.web_search_tool)
             print("🔍 Búsqueda web habilitada en el agente")
-        
+
+        # Verificar estado del RAG
+        if self.settings.rag.enable_rag:
+            print("📚 Sistema RAG habilitado - Documentos especializados disponibles")
+        else:
+            print("⚠️ Sistema RAG deshabilitado en configuración")
+
         agent_config = self.settings.agent
-        
+
         self.agent = CodeAgent(
             tools=tools,
             model=self.model,
             additional_authorized_imports=agent_config.authorized_imports,
             max_steps=agent_config.max_steps,
-            verbosity_level=agent_config.verbosity_level
+            verbosity_level=agent_config.verbosity_level,
         )
-        
+
         print(f"🤖 Agente inicializado con {len(tools)} herramientas esenciales")
-    
+
     def analyze_question(self, question: str, session_id: str = None) -> str:
         """
         Analiza una pregunta en lenguaje natural sobre inseguridad alimentaria.
-        
+
         El agente:
         1. Interpreta la pregunta
         2. Explora la estructura de la base de datos si es necesario
@@ -128,51 +139,58 @@ class InseguridadAlimentariaAgent:
         6. Genera visualizaciones apropiadas
         7. Complementa con búsquedas web si es útil
         8. Produce una respuesta completa en Markdown con palabras clave inteligentes
-        
+
         Args:
             question: Pregunta del usuario en lenguaje natural
-            
+
         Returns:
             Análisis completo en formato Markdown
         """
         try:
             # Establecer el contexto del session_id para las herramientas
             from .sql_tools import set_current_session_id
+
             if session_id:
                 set_current_session_id(session_id)
-            
+
             # Preparar el prompt con contexto específico
-            enhanced_question = self._enhance_question_with_context(question, session_id)
-            
+            enhanced_question = self._enhance_question_with_context(
+                question, session_id
+            )
+
             # Ejecutar el agente
             result = self.agent.run(enhanced_question)
-            
+
             return self._format_response(result, question)
-            
+
         except Exception as e:
             error_message = f"Error ejecutando análisis: {str(e)}"
             print(f"❌ {error_message}")
-            
+
             return self._generate_error_response(error_message, question)
-    
-    def _enhance_question_with_context(self, question: str, session_id: str = None) -> str:
+
+    def _enhance_question_with_context(
+        self, question: str, session_id: str = None
+    ) -> str:
         """
         Mejora la pregunta del usuario con contexto sobre la base de datos y capacidades.
         """
         from .session_manager import session_manager
-        
-        web_search_status = "✅ Disponible" if self.web_search_tool else "❌ No disponible"
-        
+
+        web_search_status = (
+            "✅ Disponible" if self.web_search_tool else "❌ No disponible"
+        )
+
         # Obtener contexto específico de la base de datos si está habilitado
         specific_context = ""
         if self.settings.database_context.include_context_in_prompt:
             specific_context = self.settings.database_context.get_context_content()
-        
+
         # Obtener contexto de conversación previa si hay session_id
         conversation_context = ""
         if session_id:
             conversation_context = session_manager.format_context_for_agent(session_id)
-        
+
         context = f"""
 Eres un analista experto en datos. Eres COMPLETAMENTE FLEXIBLE y DINÁMICO.
 
@@ -208,6 +226,23 @@ HERRAMIENTAS DISPONIBLES:
 - format_web_citation: Formateo de citas en estilo APA
 - create_sources_section: Secciones de fuentes bien formateadas
 - WebSearchTool: {web_search_status} - Para información contextual complementaria
+
+🔍 RAG (RETRIEVAL-AUGMENTED GENERATION):
+- search_food_security_documents: Búsqueda semántica en documentos especializados sobre seguridad alimentaria
+- get_rag_system_status: Verificar estado del sistema RAG y base de datos vectorial
+
+STATUS DEL SISTEMA RAG: {"✅ Habilitado" if self.settings.rag.enable_rag else "❌ Deshabilitado"}
+
+NOTA IMPORTANTE SOBRE RAG:
+- Usa search_food_security_documents para obtener información técnica y especializada sobre:
+  * Políticas de seguridad alimentaria
+  * Marcos normativos y reglamentarios
+  * Metodologías de medición de inseguridad alimentaria
+  * Programas gubernamentales e intervenciones
+  * Estudios especializados y reportes técnicos
+  * Conceptos técnicos y definiciones oficiales
+- Esta información complementa perfectamente tus análisis de datos cuantitativos
+- Combina datos estadísticos (SQL) con conocimiento especializado (RAG) para análisis completos
 
 METODOLOGÍA DE TRABAJO DINÁMICA:
 
@@ -309,14 +344,14 @@ REGLAS CRÍTICAS:
 PREGUNTA DEL USUARIO:
 """
         return context + question
-    
+
     def _format_response(self, result: str, original_question: str) -> str:
         """Formatea la respuesta del agente en Markdown estructurado."""
-        
+
         # Si el resultado ya está bien formateado, devolverlo tal como está
         if result and "# " in result:
             return result
-        
+
         # Si no, crear estructura básica
         formatted = f"""# Análisis de Inseguridad Alimentaria
 
@@ -333,7 +368,7 @@ Este análisis fue generado usando consultas SQL flexibles sobre la base de dato
 *Generado por el Analista AI especializado en datos de inseguridad alimentaria. Puede cometer errores, por favor verifica la respuesta.*
 """
         return formatted
-    
+
     def _generate_error_response(self, error_message: str, question: str) -> str:
         """Genera una respuesta de error estructurada."""
         return f"""# Error en el Análisis
@@ -368,11 +403,11 @@ Este análisis fue generado usando consultas SQL flexibles sobre la base de dato
 ---
 *El agente es flexible y puede adaptarse a cualquier pregunta sobre inseguridad alimentaria*
 """
-    
+
     def get_database_info(self) -> str:
         """
         Obtiene información básica sobre la base de datos disponible.
-        
+
         Returns:
             Información sobre esquema y datos disponibles
         """
@@ -381,11 +416,11 @@ Este análisis fue generado usando consultas SQL flexibles sobre la base de dato
             return get_database_schema()
         except Exception as e:
             return f"Error obteniendo información de la base de datos: {str(e)}"
-    
+
     def test_connection(self) -> Dict[str, Any]:
         """
         Prueba la conexión y configuración del agente.
-        
+
         Returns:
             Estado de los componentes del sistema
         """
@@ -395,9 +430,9 @@ Este análisis fue generado usando consultas SQL flexibles sobre la base de dato
             "agent": False,
             "api_key": False,
             "web_search": False,
-            "errors": []
+            "errors": [],
         }
-        
+
         try:
             # Verificar base de datos
             db_path = str(self.settings.database.db_path)
@@ -405,35 +440,35 @@ Este análisis fue generado usando consultas SQL flexibles sobre la base de dato
                 status["database"] = True
             else:
                 status["errors"].append(f"Base de datos no encontrada: {db_path}")
-            
+
             # Verificar API key
             api_key = self.settings.api.gemini_api_key
             if api_key and api_key != "TU_API_KEY_DE_GEMINI_AQUI":
                 status["api_key"] = True
             else:
                 status["errors"].append("GEMINI_API_KEY no configurada")
-            
+
             # Verificar modelo
             if self.model:
                 status["model"] = True
             else:
                 status["errors"].append("Modelo LiteLLM no inicializado")
-            
+
             # Verificar agente
             if self.agent:
                 status["agent"] = True
             else:
                 status["errors"].append("CodeAgent no inicializado")
-            
+
             # Verificar búsqueda web
             if self.web_search_tool:
                 status["web_search"] = True
             else:
                 status["errors"].append("WebSearchTool no disponible")
-                
+
         except Exception as e:
             status["errors"].append(f"Error en verificación: {str(e)}")
-        
+
         return status
 
 
@@ -444,4 +479,4 @@ try:
     print("🔧 El agente puede crear consultas SQL dinámicas para cualquier análisis")
 except Exception as e:
     print(f"❌ Error inicializando agente: {e}")
-    food_security_agent = None 
+    food_security_agent = None
