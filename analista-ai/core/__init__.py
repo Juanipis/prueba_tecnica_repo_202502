@@ -1,4 +1,4 @@
-# Backend core modules para SmolAgents
+# Backend core modules para SmolAgents con búsqueda web
 from .smolagent import food_security_agent, InseguridadAlimentariaAgent
 from .sql_tools import (
     sql_query,
@@ -15,6 +15,10 @@ from .sql_tools import (
     create_chart_visualization,
     create_multiple_charts,
     analyze_and_visualize,
+    format_web_citation,
+    create_sources_section,
+    extract_analysis_keywords,
+    create_formatted_markdown_table,
     get_stored_images,
     clear_stored_images
 )
@@ -36,6 +40,10 @@ __all__ = [
     'create_chart_visualization',
     'create_multiple_charts',
     'analyze_and_visualize',
+    'format_web_citation',
+    'create_sources_section',
+    'extract_analysis_keywords',
+    'create_formatted_markdown_table',
     'get_stored_images',
     'clear_stored_images'
 ] 

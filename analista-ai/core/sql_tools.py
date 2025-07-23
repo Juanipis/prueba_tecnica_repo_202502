@@ -6,6 +6,7 @@ Este módulo contiene las herramientas que el agente puede usar para:
 - Realizar análisis estadísticos
 - Generar insights sobre los datos
 - Crear visualizaciones con matplotlib (token-eficiente)
+- Formatear citas de fuentes web correctamente
 """
 
 import sqlite3
@@ -17,6 +18,8 @@ from smolagents import tool
 import base64
 from io import BytesIO
 import uuid
+import re
+from datetime import datetime
 
 # Ruta a la base de datos - se importará dinámicamente
 from .settings import get_settings
@@ -56,6 +59,103 @@ def clear_stored_images():
     """Limpia el almacenamiento temporal de imágenes."""
     global _image_storage
     _image_storage.clear()
+
+
+@tool
+def format_web_citation(source_info: str, citation_style: str = "apa") -> str:
+    """
+    Ayuda a formatear citas de fuentes web de manera consistente y profesional.
+    
+    Args:
+        source_info: Información de la fuente en formato libre (ej: "título, autor, fecha, URL")
+        citation_style: Estilo de citación ("apa", "simple")
+        
+    Returns:
+        Cita formateada según el estilo especificado
+        
+    Examples:
+        format_web_citation("Políticas de seguridad alimentaria, MinSalud Colombia, 2024, https://minsalud.gov.co/politicas")
+        -> "MinSalud Colombia. (2024). *Políticas de seguridad alimentaria*. https://minsalud.gov.co/politicas"
+    """
+    try:
+        if citation_style.lower() == "apa":
+            # Intentar extraer componentes de la información
+            parts = [part.strip() for part in source_info.split(',')]
+            
+            # Plantilla básica para APA
+            if len(parts) >= 3:
+                title = parts[0] if parts[0] else "Título no disponible"
+                author = parts[1] if len(parts) > 1 and parts[1] else "Autor no disponible"
+                date = parts[2] if len(parts) > 2 and parts[2] else "s.f."
+                url = parts[3] if len(parts) > 3 and parts[3] else ""
+                
+                # Formatear fecha si es un año
+                if date.isdigit() and len(date) == 4:
+                    date = f"({date})"
+                elif date == "s.f.":
+                    date = "(s.f.)"
+                else:
+                    date = f"({date})"
+                
+                # Formatear cita APA
+                citation = f"{author}. {date}. *{title}*."
+                if url:
+                    citation += f" {url}"
+                
+                return citation
+            else:
+                return f"Información insuficiente para formatear cita APA: {source_info}"
+        
+        elif citation_style.lower() == "simple":
+            # Formato simple: solo fuente y URL
+            parts = source_info.split(',')
+            if len(parts) >= 2:
+                source_name = parts[0].strip()
+                url = parts[-1].strip() if 'http' in parts[-1] else ""
+                return f"Fuente: {source_name}. {url}" if url else f"Fuente: {source_name}"
+            else:
+                return f"Fuente: {source_info}"
+        
+        else:
+            return f"Estilo de citación '{citation_style}' no soportado. Use 'apa' o 'simple'."
+            
+    except Exception as e:
+        return f"Error formateando cita: {str(e)}. Información original: {source_info}"
+
+
+@tool
+def create_sources_section(sources_list: str) -> str:
+    """
+    Crea una sección de fuentes consultadas bien formateada.
+    
+    Args:
+        sources_list: Lista de fuentes separadas por punto y coma (;)
+                     Formato: "fuente1_info; fuente2_info; ..."
+        
+    Returns:
+        Sección de fuentes formateada en Markdown
+        
+    Example:
+        create_sources_section("Políticas alimentarias, MinSalud, 2024, url1; Estadísticas FAO, FAO Colombia, 2023, url2")
+    """
+    try:
+        sources = [source.strip() for source in sources_list.split(';') if source.strip()]
+        
+        if not sources:
+            return "No se proporcionaron fuentes para formatear."
+        
+        formatted_section = "\n## 📚 Fuentes Consultadas\n\n"
+        
+        for i, source in enumerate(sources, 1):
+            formatted_citation = format_web_citation(source, "apa")
+            formatted_section += f"{i}. {formatted_citation}\n"
+        
+        formatted_section += "\n---\n*Fuentes consultadas para complementar el análisis de datos locales*\n"
+        
+        return formatted_section
+        
+    except Exception as e:
+        return f"Error creando sección de fuentes: {str(e)}"
 
 
 @tool
@@ -866,3 +966,154 @@ def analyze_and_visualize(query: str, analysis_type: str = "complete") -> str:
         
     except Exception as e:
         return f"Error en análisis y visualización: {str(e)}" 
+
+
+@tool
+def extract_analysis_keywords(analysis_text: str, max_keywords: int = 10) -> str:
+    """
+    Extrae palabras clave relevantes del análisis realizado.
+    
+    Args:
+        analysis_text: Texto del análisis realizado
+        max_keywords: Número máximo de palabras clave a extraer
+        
+    Returns:
+        Lista de palabras clave separadas por comas
+    """
+    try:
+        import re
+        from collections import Counter
+        
+        # Limpiar texto
+        text = analysis_text.lower()
+        
+        # Palabras clave específicas del dominio
+        domain_keywords = {
+            'inseguridad alimentaria', 'seguridad alimentaria', 'prevalencia',
+            'inseguridad grave', 'inseguridad moderada', 'hogares vulnerables',
+            'departamentos', 'municipios', 'regiones', 'colombia',
+            'antioquia', 'cundinamarca', 'atlántico', 'valle del cauca',
+            'cauca', 'nariño', 'chocó', 'córdoba', 'bolívar', 'magdalena',
+            'cesar', 'sucre', 'la guajira', 'santander', 'norte de santander',
+            'boyacá', 'tolima', 'huila', 'meta', 'casanare', 'arauca',
+            'vichada', 'guainía', 'vaupés', 'amazonas', 'guaviare',
+            'putumayo', 'caquetá', 'bogotá', 'medellín', 'cali', 'barranquilla',
+            'cartagena', 'bucaramanga', 'pereira', 'manizales', 'ibagué',
+            'neiva', 'villavicencio', 'montería', 'valledupar', 'sincelejo',
+            'riohacha', 'santa marta', 'quibdó', 'popayán', 'pasto',
+            'florencia', 'yopal', 'arauca ciudad', 'puerto carreño',
+            'inírida', 'mitú', 'leticia', 'san josé del guaviare', 'mocoa'
+        }
+        
+        # Términos de análisis estadístico
+        analysis_terms = {
+            'estadísticas descriptivas', 'promedio', 'media', 'mediana',
+            'máximo', 'mínimo', 'desviación estándar', 'percentil',
+            'distribución', 'correlación', 'tendencia', 'evolución',
+            'comparación', 'ranking', 'porcentaje', 'proporción',
+            'variabilidad', 'outliers', 'patrones', 'datos históricos'
+        }
+        
+        # Buscar palabras clave del dominio
+        found_keywords = []
+        for keyword in domain_keywords:
+            if keyword in text:
+                found_keywords.append(keyword.title())
+        
+        # Buscar términos de análisis
+        for term in analysis_terms:
+            if term in text:
+                found_keywords.append(f"📊 {term.title()}")
+        
+        # Buscar años mencionados
+        years = re.findall(r'\b(19|20)\d{2}\b', text)
+        for year in set(years):
+            found_keywords.append(f"📅 Año {year}")
+        
+        # Buscar porcentajes para identificar datos cuantitativos
+        percentages = re.findall(r'\b\d+\.?\d*\s*%', text)
+        if percentages:
+            found_keywords.append("📈 Datos Porcentuales")
+        
+        # Identificar si hay gráficas mencionadas
+        if any(word in text for word in ['gráfica', 'gráfico', 'visualización', 'chart', 'plot']):
+            found_keywords.append("📊 Visualizaciones")
+        
+        # Identificar si hay fuentes web
+        if any(word in text for word in ['según', 'fuente', 'http', 'www', 'referencias']):
+            found_keywords.append("🔗 Fuentes Externas")
+        
+        # Limitar cantidad y remover duplicados
+        unique_keywords = list(dict.fromkeys(found_keywords))[:max_keywords]
+        
+        return ", ".join(unique_keywords) if unique_keywords else "Análisis, Inseguridad Alimentaria, Colombia"
+        
+    except Exception as e:
+        return f"Error extrayendo palabras clave: {str(e)}"
+
+
+@tool 
+def create_formatted_markdown_table(data_query: str, table_title: str = "") -> str:
+    """
+    Crea una tabla Markdown correctamente formateada a partir de una consulta SQL.
+    
+    IMPORTANTE: Esta función genera tablas con el formato Markdown correcto para 
+    que se rendericen apropiadamente en el frontend.
+    
+    Args:
+        data_query: Consulta SQL que retornará los datos para la tabla
+        table_title: Título opcional para la tabla
+        
+    Returns:
+        Tabla en formato Markdown correctamente estructurada
+        
+    Formato correcto de tabla Markdown:
+    | Columna 1 | Columna 2 | Columna 3 |
+    |-----------|-----------|-----------|
+    | Dato 1    | Dato 2    | Dato 3    |
+    | Dato 4    | Dato 5    | Dato 6    |
+    """
+    try:
+        db_path = get_db_path()
+        with sqlite3.connect(db_path) as conn:
+            df = pd.read_sql_query(data_query, conn)
+        
+        if df.empty:
+            return "No se encontraron datos para crear la tabla."
+        
+        # Crear encabezado de tabla
+        table_md = ""
+        if table_title:
+            table_md += f"\n### {table_title}\n\n"
+        
+        # Crear encabezados
+        headers = "| " + " | ".join(df.columns) + " |"
+        table_md += headers + "\n"
+        
+        # Crear línea separadora
+        separator = "|" + "|".join(["-" * (len(col) + 2) for col in df.columns]) + "|"
+        table_md += separator + "\n"
+        
+        # Agregar filas de datos
+        for _, row in df.iterrows():
+            # Formatear valores (especialmente números)
+            formatted_values = []
+            for val in row:
+                if pd.isna(val):
+                    formatted_values.append("N/A")
+                elif isinstance(val, float):
+                    if val < 1.0:
+                        formatted_values.append(f"{val*100:.1f}%")  # Convertir a porcentaje
+                    else:
+                        formatted_values.append(f"{val:.2f}")
+                else:
+                    formatted_values.append(str(val))
+            
+            row_md = "| " + " | ".join(formatted_values) + " |"
+            table_md += row_md + "\n"
+        
+        table_md += "\n"
+        return table_md
+        
+    except Exception as e:
+        return f"Error creando tabla Markdown: {str(e)}" 

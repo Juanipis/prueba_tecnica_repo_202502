@@ -1,374 +1,352 @@
-# Analista AI - Backend
+# 🤖 Analista AI - Inseguridad Alimentaria Colombia
 
-Aplicación FastAPI con SmolAgents para análisis inteligente de datos de inseguridad alimentaria en Colombia.
+Sistema inteligente de análisis de datos de inseguridad alimentaria en Colombia usando **SmolAgents** + **Gemini AI** + **Búsqueda Web**.
 
-## 🚀 Características
+## ✨ Características Principales
 
-- **SmolAgent Inteligente**: Utiliza SmolAgents con Gemini para análisis autocorrectivo
-- **Frontend Integrado**: Interface web completa para consultas interactivas
-- **Configuración Tipada**: Sistema de configuración robusto con pydantic-settings
-- **SQL Dinámico**: El agente escribe consultas SQL según las preguntas del usuario
-- **Análisis Estadístico**: Integración con pandas, numpy y matplotlib
-- **Visualizaciones Automáticas**: Genera gráficas con matplotlib integradas en el frontend
-- **Autocorrección**: Si una consulta falla, el agente la corrige automáticamente
+### 🧠 Agente Inteligente
 
-## 📦 Instalación
+- **SmolAgents con Gemini**: Procesamiento de lenguaje natural avanzado
+- **Autocorrección**: Se corrige automáticamente si las consultas SQL fallan
+- **Análisis Estadístico**: Integración con pandas/numpy para análisis profundos
+- **🔍 Búsqueda Web**: Complementa análisis con información actualizada de internet
 
-### 1. Instalar Dependencias
+### 📊 Capacidades de Análisis
 
-```bash
-# Usando Poetry (recomendado)
-poetry install
+- Consultas SQL dinámicas generadas automáticamente
+- Estadísticas descriptivas (media, mediana, desviación estándar)
+- Rankings y comparaciones entre entidades geográficas
+- Análisis temporal y evolución de indicadores
+- Visualizaciones automáticas con matplotlib (token-eficientes)
 
-# O usando pip
-pip install -r requirements.txt
-```
+### 🌐 Búsqueda Contextual con Citación
 
-### 2. Configurar Variables de Entorno
+- **DuckDuckGo Integration**: Búsquedas web complementarias
+- **Contexto Inteligente**: Combina datos locales con información externa
+- **📚 Citación Automática**: Incluye fuentes web en formato APA automáticamente
+- **URLs Verificables**: Todas las fuentes incluyen enlaces funcionales
+- **Información Actualizada**: Políticas públicas, causas, comparaciones internacionales
 
-```bash
-# Copiar archivo de configuración
-cp .env.example .env
+### 🎨 Visualizaciones y Tablas
 
-# Editar .env y configurar las variables necesarias
-# Como mínimo necesitas: GEMINI_API_KEY=tu_api_key_aqui
-```
+- **Gráficas**: barras, líneas, circular, dispersión e histogramas
+- **📊 Tablas Markdown**: Formato correcto garantizado para el frontend
+- **🔍 Palabras Clave**: Extracción automática de insights principales
+- **Renderizado Perfecto**: CSS optimizado para tablas y elementos visuales
+- Almacenamiento temporal token-eficiente
 
-**Configuración usando pydantic-settings**:
+## 🗃️ Datos Disponibles
 
-- ✅ **Validación automática** de tipos y valores
-- ✅ **Configuración estructurada** en categorías
-- ✅ **Valores por defecto** seguros
-- ✅ **Documentación integrada** en cada campo
-
-Para obtener tu API key:
-
-1. Ve a [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Crea un nuevo proyecto o selecciona uno existente
-3. Genera una nueva API key
-4. Agrégala al archivo `.env` como `GEMINI_API_KEY=tu_key_aqui`
-
-### 3. Verificar Base de Datos
-
-Asegúrate de que la base de datos esté en:
-
-```
-../data/sqlite_databases/inseguridad_alimentaria_latest.db
-```
-
-## 🎯 Uso
-
-### Iniciar el Servidor
-
-```bash
-# Desarrollo
-python main.py
-
-# O con uvicorn
-uvicorn main:app --reload --host 127.0.0.1 --port 8000
-```
-
-### Acceder a la Aplicación
-
-- **Frontend Principal**: http://127.0.0.1:8000
-- **API Info**: http://127.0.0.1:8000/api-info
-- **Documentación**: http://127.0.0.1:8000/docs
-- **ReDoc**: http://127.0.0.1:8000/redoc
-
-## 🔧 API Endpoints
-
-### Principales
-
-| Endpoint   | Método | Descripción               |
-| ---------- | ------ | ------------------------- |
-| `/`        | GET    | Frontend principal (HTML) |
-| `/analyze` | POST   | Análisis con SmolAgent    |
-| `/status`  | GET    | Estado del sistema        |
-| `/schema`  | GET    | Esquema de base de datos  |
-
-### Utilidad
-
-| Endpoint    | Método | Descripción               |
-| ----------- | ------ | ------------------------- |
-| `/health`   | GET    | Estado básico del sistema |
-| `/examples` | GET    | Ejemplos de preguntas     |
-| `/api-info` | GET    | Información de la API     |
-
-## 🤖 Capacidades del SmolAgent
-
-### Herramientas Disponibles
-
-- **sql_query**: Consultas SQL directas
-- **get_database_schema**: Explorar estructura de datos
-- **analyze_data_pandas**: Análisis estadísticos avanzados
-- **get_top_entities**: Rankings de entidades
-- **compare_years**: Análisis temporal
-- **calculate_statistics**: Estadísticas descriptivas
-- **create_formatted_table**: Tablas formateadas
-- **get_available_years**: Años disponibles
-- **get_available_indicators**: Indicadores disponibles
-- **get_entities_by_level**: Entidades por nivel geográfico
-- **quick_summary**: Resumen rápido
-
-### 📊 Herramientas de Visualización (NUEVO - Token-Eficiente)
-
-- **create_chart_visualization**: Crea gráficas individuales (bar, line, pie, scatter, histogram)
-- **create_multiple_charts**: Genera múltiples gráficas en una sola consulta
-- **analyze_and_visualize**: Análisis completo con visualizaciones automáticas
-
-**🚀 Sistema Token-Eficiente**: Las herramientas NO retornan imágenes base64 al agente (evita consumir tokens masivamente). Las imágenes se almacenan temporalmente y se inyectan solo en la respuesta final al frontend.
-
-### Ejemplos de Preguntas
-
-```
-# Situación general
-"¿Cuál es la situación de inseguridad alimentaria en Colombia?"
-
-# Rankings
-"¿Qué departamentos tienen mayor inseguridad alimentaria grave en 2022?"
-
-# Comparaciones
-"Compara la evolución de inseguridad alimentaria entre Antioquia y Cundinamarca"
-
-# Estadísticas
-"¿Cuáles son las estadísticas descriptivas de inseguridad moderada en 2023?"
-
-# Por región
-"Muestra los 5 municipios con mayor inseguridad alimentaria en Antioquia"
-
-# Temporal
-"¿Cómo ha evolucionado la inseguridad alimentaria en los últimos años?"
-
-# Visualizaciones (NUEVO)
-"Crea una gráfica de barras que muestre los 10 departamentos con mayor inseguridad alimentaria grave en 2022"
-
-"Analiza con gráficas la distribución de inseguridad alimentaria por regiones en Colombia"
-
-"Haz un análisis completo con visualizaciones de la evolución temporal de inseguridad alimentaria"
-
-"Genera múltiples gráficas: una de barras por departamento y otra circular por regiones"
-```
-
-## 🛠️ Desarrollo
-
-### Estructura del Proyecto
-
-```
-backend/
-├── core/
-│   ├── __init__.py
-│   ├── settings.py          # ⭐ Configuración con pydantic-settings
-│   ├── smolagent.py         # Configuración del SmolAgent
-│   └── sql_tools.py         # Herramientas SQL para el agente
-├── static/
-│   └── index.html           # Frontend principal
-├── main.py                  # Aplicación FastAPI
-├── pyproject.toml           # Dependencias
-├── requirements.txt         # Dependencias para pip
-├── .env.example             # Ejemplo de configuración
-└── README.md                # Este archivo
-```
-
-### ⭐ Sistema de Configuración (pydantic-settings)
-
-El proyecto usa **pydantic-settings** para configuración tipada y validada:
-
-```python
-# core/settings.py
-class AppSettings(BaseSettings):
-    # Configuraciones anidadas por categoría
-    database: DatabaseSettings      # DB_* variables
-    api: APISettings                # GEMINI_* variables
-    agent: SmolAgentSettings        # AGENT_* variables
-    server: ServerSettings          # SERVER_* variables
-    logging: LoggingSettings        # LOG_* variables
-
-    # Archivo .env automático
-    class Config:
-        env_file = ".env"
-```
-
-**Ventajas sobre python-dotenv**:
-
-- ✅ Validación automática de tipos
-- ✅ Valores por defecto documentados
-- ✅ Estructura organizada por categorías
-- ✅ Validación de rangos y formatos
-- ✅ Autocompletado en IDEs
-
-### Variables de Entorno Disponibles
-
-#### Configuración Básica (Requerida)
-
-```bash
-GEMINI_API_KEY=tu_api_key_aqui
-```
-
-#### Configuración de Base de Datos
-
-```bash
-DB_PATH=../data/sqlite_databases/inseguridad_alimentaria_latest.db
-DB_CONNECTION_TIMEOUT=30
-DB_MAX_RETRIES=3
-```
-
-#### Configuración del SmolAgent
-
-```bash
-AGENT_MAX_STEPS=15
-AGENT_VERBOSITY_LEVEL=1
-AGENT_ENABLE_CODE_EXECUTION=true
-```
-
-#### Configuración del Servidor
-
-```bash
-SERVER_HOST=127.0.0.1
-SERVER_PORT=8000
-SERVER_RELOAD=true
-SERVER_DEBUG=true
-```
-
-#### Configuración de Logging
-
-```bash
-LOG_LEVEL=INFO
-LOG_TO_FILE=false
-```
-
-### Agregar Nuevas Herramientas
-
-1. Crear función en `core/sql_tools.py` con decorador `@tool`
-2. Importar en `core/smolagent.py`
-3. Agregar a la lista `tools` en `_initialize_agent()`
-
-### Configuración del SmolAgent
-
-```python
-# Configuración automática desde settings
-agent_config = self.settings.agent
-
-self.agent = CodeAgent(
-    tools=tools,
-    model=self.model,
-    additional_authorized_imports=agent_config.authorized_imports,
-    max_steps=agent_config.max_steps,  # Desde AGENT_MAX_STEPS
-    verbosity_level=agent_config.verbosity_level  # Desde AGENT_VERBOSITY_LEVEL
-)
-```
-
-## 🔍 Solución de Problemas
-
-### Error: Agente no inicializado
-
-```bash
-# Verificar configuración
-python -c "from core.settings import print_settings_summary; print_settings_summary()"
-
-# Verificar archivo .env
-cat .env
-```
-
-### Error: Configuración inválida
-
-El sistema ahora valida automáticamente la configuración al inicio:
-
-```bash
-# Ver validación completa
-python core/settings.py
-```
-
-### Error: Dependencias faltantes
-
-```bash
-# Reinstalar dependencias
-poetry install --no-cache
-
-# O con pip
-pip install -r requirements.txt --force-reinstall
-```
-
-### Error: Importaciones no autorizadas
-
-Las importaciones están configuradas en `AGENT_AUTHORIZED_IMPORTS` o por defecto en settings.py.
-
-### Error: pydantic-settings no encontrado
-
-```bash
-pip install pydantic-settings>=2.5.2
-# O
-poetry add pydantic-settings
-```
-
-## 📊 Visualizaciones con Matplotlib
-
-### Cómo Funciona
-
-El SmolAgent ahora puede **generar gráficas automáticamente** usando matplotlib:
-
-1. **Gráficas Automáticas**: Solo pide "analiza con gráficas" y el agente decide qué visualizar
-2. **Gráficas Específicas**: Especifica el tipo: "crea una gráfica de barras de..."
-3. **Múltiples Gráficas**: Genera varias visualizaciones en una sola consulta
-4. **Integración Perfecta**: Las gráficas aparecen directamente en el frontend
-
-### Tipos de Gráficas Disponibles
-
-- **bar**: Gráficas de barras para comparaciones
-- **line**: Gráficas de líneas para evolución temporal
-- **pie**: Gráficas circulares para proporciones
-- **scatter**: Diagramas de dispersión para correlaciones
-- **histogram**: Histogramas para distribuciones
-
-### Ejemplos de Uso
-
-```
-"Crea una gráfica de barras con los departamentos con mayor inseguridad alimentaria"
-"Analiza con histograma la distribución de los valores de inseguridad"
-"Haz una gráfica circular que muestre la proporción por regiones"
-"Genera un análisis completo con múltiples visualizaciones automáticas"
-```
-
-## 📊 Base de Datos
-
-### Esquema
-
-- **geografia**: Entidades geográficas (Nacional, Regional, Departamental, Municipal)
-- **indicadores**: Tipos de indicadores de inseguridad alimentaria
-- **datos_medicion**: Mediciones por entidad, indicador y año
-
-### Indicadores Principales
+### Indicadores de Inseguridad Alimentaria
 
 1. **Inseguridad Alimentaria Grave**
 2. **Inseguridad Alimentaria Moderado o Grave**
 3. **Prevalencia de hogares en inseguridad alimentaria**
 
+### Cobertura Geográfica
+
+- **Nacional**: Colombia
+- **Regional**: Regiones de Colombia
+- **Departamental**: 32 departamentos
+- **Municipal**: Principales municipios
+
 ### Período de Datos
 
 - **Principal**: 2022-2024
-- **Adicional**: Algunos datos de 2015
+- **Histórico**: Algunos datos desde 2015
 
-## 🔧 Migración desde python-dotenv
+## 🚀 Instalación y Configuración
 
-Si estás migrando desde la versión anterior:
+### 1. Instalar Dependencias
 
-1. **Actualizar dependencias**:
+```bash
+# Con pip
+pip install -r requirements.txt
 
-   ```bash
-   pip uninstall python-dotenv
-   pip install pydantic-settings>=2.5.2
-   ```
+# Con poetry (recomendado)
+poetry install
+```
 
-2. **El archivo .env sigue funcionando** igual, pero ahora con validación
+### 2. Configurar API Key de Gemini
 
-3. **Nuevas variables organizadas** por prefijos:
-   - `GEMINI_*` para API de Gemini
-   - `DB_*` para base de datos
-   - `AGENT_*` para SmolAgent
-   - `SERVER_*` para servidor FastAPI
-   - `LOG_*` para logging
+```bash
+# Crear archivo .env (opcional)
+echo "GEMINI_API_KEY=tu_api_key_aqui" > .env
 
-## 📝 Licencia
+# O configurar como variable de entorno
+export GEMINI_API_KEY="tu_api_key_aqui"
+```
 
-Este proyecto está bajo la licencia MIT. Ver `LICENSE` para más detalles.
+### 3. Ejecutar Aplicación
 
-Powered by **FastAPI** + **SmolAgents** + **LiteLLM** + **Gemini AI** + **Pydantic Settings**
+```bash
+# Desarrollo
+python main.py
+
+# Con uvicorn directamente
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### 4. Probar Funcionalidades
+
+```bash
+# Ejecutar script de pruebas de citación
+python test_citations.py
+
+# Ejecutar script de pruebas de tablas y palabras clave
+python test_table_keywords.py
+
+# Verificar todo el sistema está funcionando
+python -c "from core.smolagent import food_security_agent; print('✅ Sistema listo' if food_security_agent else '❌ Error')"
+```
+
+## 💡 Ejemplos de Uso
+
+### Análisis Básicos
+
+```
+¿Cuál es la situación de inseguridad alimentaria en Colombia?
+¿Qué departamentos tienen mayor inseguridad alimentaria en 2022?
+¿Cómo está la situación en Antioquia?
+```
+
+### Análisis Comparativos
+
+```
+Compara la inseguridad alimentaria entre Antioquia y Cundinamarca
+¿Cuál es la diferencia entre inseguridad grave y moderada?
+Compara los datos de 2022 vs 2023
+```
+
+### Con Contexto Web y Citas 📚
+
+```
+¿Cuáles son las principales políticas públicas de Colombia para combatir
+la inseguridad alimentaria y cómo se relacionan con nuestros datos?
+
+Analiza la situación de inseguridad alimentaria en Chocó y complementa
+con información sobre las causas del conflicto armado con fuentes verificables
+
+Compara nuestros datos con estadísticas internacionales de inseguridad
+alimentaria en América Latina y cita las fuentes consultadas
+
+Investiga las causas principales de inseguridad alimentaria en Colombia
+según organizaciones internacionales y contrasta con nuestros datos
+```
+
+### Visualizaciones
+
+```
+Crea una gráfica de barras que muestre los 10 departamentos con mayor
+inseguridad alimentaria grave en 2022
+
+Analiza con gráficas la distribución de inseguridad alimentaria por
+regiones en Colombia
+```
+
+## 🔧 API Endpoints
+
+### Análisis Principal
+
+- `POST /analyze` - Análisis inteligente con SmolAgent + Web Search
+- `GET /examples` - Ejemplos de preguntas
+
+### Información del Sistema
+
+- `GET /status` - Estado detallado del agente y componentes
+- `GET /health` - Verificación básica del sistema
+- `GET /schema` - Esquema de la base de datos
+
+### Documentación
+
+- `GET /docs` - Swagger UI
+- `GET /redoc` - ReDoc
+- `GET /api-info` - Página de información completa
+
+## 🧪 Arquitectura Técnica
+
+### Backend
+
+- **FastAPI**: Framework web moderno y rápido
+- **SmolAgents**: Framework de agentes inteligentes
+- **LiteLLM**: Integración con múltiples modelos de IA
+- **Gemini AI**: Modelo de lenguaje principal
+- **WebSearchTool**: Búsquedas web con DuckDuckGo
+
+### Base de Datos
+
+- **SQLite**: Base de datos normalizada
+- **Pandas**: Análisis de datos en memoria
+- **NumPy**: Computación numérica eficiente
+
+### Visualizaciones
+
+- **Matplotlib**: Generación de gráficas
+- **Sistema Token-Eficiente**: Almacenamiento temporal de imágenes
+
+## 🔍 Flujo de Análisis
+
+1. **Interpretación**: El agente interpreta la pregunta en lenguaje natural
+2. **Decisión**: Determina si necesita datos locales, búsqueda web, o ambos
+3. **Búsqueda Local**: Genera y ejecuta consultas SQL dinámicamente
+4. **Búsqueda Web**: Busca información complementaria si es necesario
+5. **Análisis**: Realiza estadísticas con pandas/numpy
+6. **Visualización**: Genera gráficas automáticamente si es apropiado
+7. **Síntesis**: Combina todos los resultados en respuesta estructurada
+8. **Autocorrección**: Se corrige automáticamente si hay errores
+
+## 📚 Sistema de Citación de Fuentes Web
+
+### Formato Automático APA
+
+Cuando el agente utiliza información de fuentes web, automáticamente:
+
+1. **Incluye citas en el texto**: Referencia las fuentes como "Según [Fuente]..." o "(Fuente: [Nombre])"
+2. **Genera sección de fuentes**: Crea automáticamente una sección "📚 Fuentes Consultadas"
+3. **Formato APA**: Utiliza el estándar académico APA para las citas
+4. **URLs funcionales**: Incluye enlaces directos a las fuentes originales
+
+### Ejemplo de Respuesta con Citas
+
+```markdown
+# Análisis de Políticas de Seguridad Alimentaria
+
+## Datos de Nuestra Base de Datos
+
+[Análisis de datos locales...]
+
+## Contexto de Políticas Públicas
+
+Según el Ministerio de Salud de Colombia [1], las políticas actuales se enfocan en...
+La FAO Colombia [2] reporta que los programas gubernamentales han tenido...
+
+## 📚 Fuentes Consultadas
+
+1. Ministerio de Salud de Colombia. (2024). _Política Nacional de Seguridad Alimentaria_. https://www.minsalud.gov.co/politicas
+2. FAO Colombia. (2024). _Programas de Seguridad Alimentaria en Colombia_. https://www.fao.org/colombia/programas
+
+---
+
+_Fuentes consultadas para complementar el análisis de datos locales_
+```
+
+### Herramientas de Citación Disponibles
+
+- **format_web_citation**: Formatea citas individuales en estilo APA
+- **create_sources_section**: Genera secciones completas de fuentes consultadas
+
+## 📊 Sistema de Tablas Markdown Mejorado
+
+### Formato Correcto Garantizado
+
+El agente ahora genera tablas Markdown con formato perfecto para el frontend según los estándares de [sintaxis Markdown](https://htmlmarkdown.com/syntax/markdown-tables/):
+
+```markdown
+| Departamento | Indicador | Año  | Porcentaje |
+| ------------ | --------- | ---- | ---------- |
+| Chocó        | Grave     | 2022 | 28.5%      |
+| La Guajira   | Grave     | 2022 | 24.2%      |
+```
+
+### Características del Sistema de Tablas
+
+1. **📏 Formato Consistente**: Todas las columnas alineadas correctamente
+2. **🔢 Formateo Automático**: Números y porcentajes con formato apropiado
+3. **🎨 CSS Mejorado**: Tablas con hover effects y diseño profesional
+4. **📱 Responsivo**: Tablas que se adaptan a diferentes tamaños de pantalla
+
+### Herramientas de Tablas Disponibles
+
+- **create_formatted_markdown_table**: Genera tablas con formato perfecto
+- **create_formatted_table**: Tablas básicas (legacy)
+
+## 🔍 Sistema de Palabras Clave Inteligente
+
+### Extracción Automática
+
+El agente automáticamente identifica y extrae:
+
+- **🌍 Términos Geográficos**: Departamentos, municipios, regiones mencionados
+- **📊 Conceptos Estadísticos**: Media, mediana, correlación, tendencias
+- **📅 Datos Temporales**: Años específicos analizados
+- **📈 Insights Cuantitativos**: Presencia de porcentajes y datos numéricos
+
+### Visualización en el Frontend
+
+Las palabras clave aparecen como **tags coloridos** al final del análisis:
+
+- **Azules**: Términos geográficos y conceptos principales
+- **Verdes**: Insights estadísticos y metodológicos
+
+### Ejemplo de Palabras Clave Generadas
+
+```
+🔍 Palabras Clave del Análisis
+[Chocó] [Inseguridad Alimentaria] [📅 Año 2022] [📊 Estadísticas] [📈 Datos Porcentuales]
+```
+
+## 🛠️ Configuración Avanzada
+
+### Configuración del Agente
+
+```python
+# core/settings.py
+class SmolAgentSettings(BaseSettings):
+    max_steps: int = 15  # Máximo pasos de autocorrección
+    verbosity_level: int = 1  # Nivel de detalle en logs
+    enable_code_execution: bool = True  # Ejecución de código Python
+```
+
+### Configuración de Búsqueda Web
+
+La búsqueda web se inicializa automáticamente y usa DuckDuckGo sin necesidad de API keys adicionales.
+
+## 📊 Estado del Sistema
+
+Verifica el estado completo en: `GET /status`
+
+```json
+{
+  "agent_available": true,
+  "components": {
+    "database": true,
+    "model": true,
+    "agent": true,
+    "api_key": true,
+    "web_search": true
+  },
+  "system_ready": true
+}
+```
+
+## 🔄 Autocorrección Inteligente
+
+El agente puede:
+
+- Detectar errores de sintaxis SQL y corregirlos
+- Adaptar consultas según el esquema real de la base de datos
+- Reintentar análisis con diferentes enfoques
+- Sugerir consultas alternativas si los datos no están disponibles
+
+## 📈 Mejoras Token-Eficientes
+
+- **Visualizaciones**: Las imágenes se almacenan temporalmente, no se envían como base64
+- **Búsquedas Web**: Solo se incluye información relevante y resumida
+- **Respuestas**: Formato markdown estructurado y conciso
+
+## 🤝 Contribuir
+
+Este proyecto está diseñado para ser extensible. Puedes agregar:
+
+- Nuevas herramientas al agente
+- Indicadores adicionales a la base de datos
+- Tipos de visualizaciones personalizadas
+- Fuentes de datos externas
+
+## 📄 Licencia
+
+[Incluir información de licencia]
+
+---
+
+**Powered by**: FastAPI + SmolAgents + LiteLLM + Gemini AI + DuckDuckGo Search + APA Citation System + Enhanced Markdown Tables + Smart Keywords

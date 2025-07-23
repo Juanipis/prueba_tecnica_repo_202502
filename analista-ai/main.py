@@ -117,6 +117,12 @@ async def api_info():
     
     agent_status = "✅ Activo" if food_security_agent else "❌ Error"
     
+    web_search_status = "✅ Disponible" if (
+        food_security_agent and 
+        hasattr(food_security_agent, 'web_search_tool') and 
+        food_security_agent.web_search_tool
+    ) else "❌ No disponible"
+    
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -168,6 +174,10 @@ async def api_info():
                 🔑 <strong>API Gemini:</strong> {api_key_status}
             </div>
             
+            <div class="status {'success' if web_search_status.startswith('✅') else 'warning'}">
+                🔍 <strong>Búsqueda Web:</strong> {web_search_status}
+            </div>
+            
             <h2>🔍 Endpoint Principal</h2>
             <div class="endpoint">
                 <strong>POST /analyze</strong><br>
@@ -196,6 +206,10 @@ async def api_info():
                     <div class="feature">
                         <strong>📈 Análisis Estadístico</strong><br>
                         Integración con pandas/numpy para análisis avanzados
+                    </div>
+                    <div class="feature">
+                        <strong>🔍 Búsqueda Web</strong><br>
+                        Complementa análisis con información actualizada de internet
                     </div>
                 </div>
                 
@@ -301,10 +315,16 @@ async def analyze_question(request: QuestionRequest):
         # Limpiar almacenamiento temporal
         clear_stored_images()
         
+        web_search_indicator = " + Web Search" if (
+            food_security_agent and 
+            hasattr(food_security_agent, 'web_search_tool') and 
+            food_security_agent.web_search_tool
+        ) else ""
+        
         return AnalysisResponse(
             question=request.question,
             analysis=analysis,
-            agent_used="SmolAgent CodeAgent with Gemini (Token-Optimized)",
+            agent_used=f"SmolAgent CodeAgent with Gemini{web_search_indicator} (Token-Optimized)",
             success=True
         )
         
@@ -356,7 +376,8 @@ async def get_agent_status():
                 "database": False,
                 "model": False,
                 "agent": False,
-                "api_key": False
+                "api_key": False,
+                "web_search": False
             }
         }
     
@@ -368,7 +389,8 @@ async def get_agent_status():
                 "database": status["database"],
                 "model": status["model"], 
                 "agent": status["agent"],
-                "api_key": status["api_key"]
+                "api_key": status["api_key"],
+                "web_search": status["web_search"]
             },
             "errors": status["errors"],
             "system_ready": all([
@@ -385,7 +407,8 @@ async def get_agent_status():
                 "database": False,
                 "model": False,
                 "agent": False,
-                "api_key": False
+                "api_key": False,
+                "web_search": False
             }
         }
 
@@ -399,12 +422,18 @@ async def health_check():
         settings.api.gemini_api_key != "TU_API_KEY_DE_GEMINI_AQUI"
     )
     agent_available = food_security_agent is not None
+    web_search_available = bool(
+        food_security_agent and 
+        hasattr(food_security_agent, 'web_search_tool') and 
+        food_security_agent.web_search_tool
+    )
     
     return {
         "status": "healthy" if (db_exists and agent_available) else "degraded",
         "database": "OK" if db_exists else "ERROR",
         "agent": "OK" if agent_available else "ERROR", 
         "api_key": "OK" if api_key_configured else "NOT_CONFIGURED",
+        "web_search": "OK" if web_search_available else "NOT_AVAILABLE",
         "message": "Sistema SmolAgents operativo" if (db_exists and agent_available) else "Revisar configuración"
     }
 
@@ -425,10 +454,10 @@ async def get_examples():
             "¿Cuál es la diferencia entre inseguridad grave y moderada?",
             "Compara los datos de 2022 vs 2023"
         ],
-        "estadisticas": [
-            "¿Cuáles son las estadísticas descriptivas de inseguridad moderada en 2023?",
-            "Calcula la media y desviación estándar por departamento",
-            "¿Cuál es la distribución de inseguridad alimentaria por regiones?"
+        "estadisticas_con_tablas": [
+            "¿Cuáles son las estadísticas descriptivas de inseguridad moderada en 2023? Muestra los resultados en una tabla",
+            "Calcula la media y desviación estándar por departamento y presenta en tabla formateada",
+            "¿Cuál es la distribución de inseguridad alimentaria por regiones? Incluye tabla y palabras clave del análisis"
         ],
         "rankings": [
             "Muestra los 10 departamentos con mayor inseguridad alimentaria",
@@ -446,6 +475,14 @@ async def get_examples():
             "Haz un análisis completo con visualizaciones de la evolución temporal",
             "Genera múltiples gráficas: una de barras por departamento y otra circular por regiones",
             "Crea un histograma de la distribución de inseguridad moderada en 2023"
+        ],
+        "contextuales_con_citas": [
+            "¿Cuáles son las principales políticas públicas de Colombia para combatir la inseguridad alimentaria y cómo se relacionan con nuestros datos? (incluye fuentes)",
+            "Analiza la situación de inseguridad alimentaria en Chocó y complementa con información sobre las causas del conflicto armado con fuentes verificables",
+            "Compara nuestros datos con estadísticas internacionales de inseguridad alimentaria en América Latina y cita las fuentes consultadas",
+            "¿Qué programas gubernamentales actuales existen para atender la inseguridad alimentaria en las zonas más afectadas? (con referencias web)",
+            "Contextualiza los datos de 2022-2024 con eventos recientes que puedan haber afectado la seguridad alimentaria, citando fuentes confiables",
+            "Investiga las causas principales de inseguridad alimentaria en Colombia según organizaciones internacionales y contrasta con nuestros datos"
         ]
     }
     

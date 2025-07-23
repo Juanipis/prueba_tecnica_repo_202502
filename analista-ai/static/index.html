@@ -337,6 +337,57 @@
         margin: 20px 0;
       }
 
+      /* Estilos para palabras clave */
+      .keywords-section {
+        margin-top: 25px;
+        padding: 20px;
+        background: linear-gradient(135deg, #f8f9ff 0%, #e8ebff 100%);
+        border-radius: 12px;
+        border: 1px solid #e1e5e9;
+        border-left: 5px solid #667eea;
+      }
+
+      .keywords-title {
+        color: #667eea;
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .keywords-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .keyword-tag {
+        background: #667eea;
+        color: white;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        cursor: default;
+      }
+
+      .keyword-tag:hover {
+        background: #5a6fd8;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+      }
+
+      .insight-tag {
+        background: #28a745;
+      }
+
+      .insight-tag:hover {
+        background: #218838;
+      }
+
       @keyframes fadeInDown {
         from {
           opacity: 0;
@@ -698,6 +749,12 @@
         // Convertir Markdown a HTML básico
         let htmlContent = markdownToHtml(data.analysis);
 
+        // Extraer y mostrar palabras clave
+        const keywords = extractKeywords(data.analysis);
+        if (keywords.length > 0) {
+          htmlContent += generateKeywordsSection(keywords);
+        }
+
         resultText.innerHTML = htmlContent;
         resultSection.style.display = "block";
 
@@ -706,6 +763,149 @@
           behavior: "smooth",
           block: "start",
         });
+      }
+
+      // Extraer palabras clave del análisis
+      function extractKeywords(analysis) {
+        const keywords = new Set();
+        const insights = new Set();
+
+        // Palabras clave relacionadas con inseguridad alimentaria
+        const foodSecurityTerms = [
+          "inseguridad alimentaria",
+          "seguridad alimentaria",
+          "prevalencia",
+          "grave",
+          "moderada",
+          "hogares",
+          "departamento",
+          "municipal",
+          "nacional",
+          "regional",
+          "Colombia",
+          "antioquia",
+          "cundinamarca",
+          "atlántico",
+          "valle",
+          "cauca",
+          "nariño",
+          "chocó",
+          "córdoba",
+          "bolívar",
+          "magdalena",
+          "cesar",
+          "sucre",
+          "guajira",
+          "santander",
+          "norte de santander",
+          "boyacá",
+          "tolima",
+          "huila",
+          "meta",
+          "casanare",
+          "arauca",
+          "vichada",
+          "guainía",
+          "vaupés",
+          "amazonas",
+          "guaviare",
+          "putumayo",
+          "caquetá",
+          "bogotá",
+        ];
+
+        // Términos de análisis estadístico
+        const analysisTerms = [
+          "estadísticas",
+          "promedio",
+          "media",
+          "mediana",
+          "máximo",
+          "mínimo",
+          "desviación",
+          "percentil",
+          "distribución",
+          "correlación",
+          "tendencia",
+          "evolución",
+          "comparación",
+          "ranking",
+          "porcentaje",
+          "proporción",
+        ];
+
+        // Convertir a minúsculas para búsqueda
+        const lowerAnalysis = analysis.toLowerCase();
+
+        // Buscar términos de seguridad alimentaria
+        foodSecurityTerms.forEach((term) => {
+          if (lowerAnalysis.includes(term.toLowerCase())) {
+            // Capitalizar primera letra
+            keywords.add(term.charAt(0).toUpperCase() + term.slice(1));
+          }
+        });
+
+        // Buscar términos de análisis
+        analysisTerms.forEach((term) => {
+          if (lowerAnalysis.includes(term.toLowerCase())) {
+            insights.add(term.charAt(0).toUpperCase() + term.slice(1));
+          }
+        });
+
+        // Buscar números y años para identificar datos específicos
+        const numbers = analysis.match(/\b(19|20)\d{2}\b/g);
+        if (numbers) {
+          numbers.forEach((year) => keywords.add(`Año ${year}`));
+        }
+
+        // Buscar porcentajes
+        const percentages = analysis.match(/\b\d+\.?\d*\s*%/g);
+        if (percentages && percentages.length > 0) {
+          insights.add("Datos Porcentuales");
+        }
+
+        // Combinar keywords e insights
+        return [
+          ...Array.from(keywords).slice(0, 8), // Máximo 8 keywords
+          ...Array.from(insights).slice(0, 4), // Máximo 4 insights
+        ];
+      }
+
+      // Generar sección de palabras clave
+      function generateKeywordsSection(keywords) {
+        if (keywords.length === 0) return "";
+
+        let keywordsHtml = `
+          <div class="keywords-section">
+            <div class="keywords-title">
+              🔍 Palabras Clave del Análisis
+            </div>
+            <div class="keywords-container">
+        `;
+
+        keywords.forEach((keyword, index) => {
+          // Los primeros son keywords normales, los últimos son insights
+          const isInsight =
+            index >= keywords.length - 4 &&
+            (keyword.includes("Estadísticas") ||
+              keyword.includes("Promedio") ||
+              keyword.includes("Datos") ||
+              keyword.includes("Distribución") ||
+              keyword.includes("Correlación") ||
+              keyword.includes("Tendencia"));
+
+          const tagClass = isInsight
+            ? "keyword-tag insight-tag"
+            : "keyword-tag";
+          keywordsHtml += `<span class="${tagClass}">${keyword}</span>`;
+        });
+
+        keywordsHtml += `
+            </div>
+          </div>
+        `;
+
+        return keywordsHtml;
       }
 
       // Convertir Markdown básico a HTML
@@ -788,16 +988,47 @@
           );
         });
 
-        // 8. Procesar tablas (básico)
+        // 8. Procesar tablas Markdown correctamente
         processedMarkdown = processedMarkdown.replace(
-          /\|([^|]+)\|/g,
-          function (match, content) {
-            const cells = content.split("|").map((cell) => cell.trim());
-            return (
-              "<tr>" +
-              cells.map((cell) => `<td>${cell}</td>`).join("") +
-              "</tr>"
-            );
+          /(\|[^|\n]*\|[\s\S]*?\n(?:\|[^|\n]*\|.*\n?)*)/g,
+          function (match) {
+            const lines = match.trim().split("\n");
+            let tableHtml = "<table>\n";
+
+            for (let i = 0; i < lines.length; i++) {
+              const line = lines[i].trim();
+
+              // Saltar líneas de separación (que contienen solo | y -)
+              if (line.match(/^\|[\s\-|:]+\|$/)) {
+                continue;
+              }
+
+              if (line.startsWith("|") && line.endsWith("|")) {
+                const cells = line
+                  .slice(1, -1)
+                  .split("|")
+                  .map((cell) => cell.trim());
+
+                if (i === 0) {
+                  // Primera fila = header
+                  tableHtml += "  <thead>\n    <tr>\n";
+                  cells.forEach((cell) => {
+                    tableHtml += `      <th>${cell}</th>\n`;
+                  });
+                  tableHtml += "    </tr>\n  </thead>\n  <tbody>\n";
+                } else {
+                  // Filas de datos
+                  tableHtml += "    <tr>\n";
+                  cells.forEach((cell) => {
+                    tableHtml += `      <td>${cell}</td>\n`;
+                  });
+                  tableHtml += "    </tr>\n";
+                }
+              }
+            }
+
+            tableHtml += "  </tbody>\n</table>";
+            return tableHtml;
           }
         );
 
