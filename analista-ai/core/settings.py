@@ -33,6 +33,53 @@ class DatabaseSettings(BaseSettings):
         return v
     
 
+class DatabaseContextSettings(BaseSettings):
+    """Configuración del contexto específico de la base de datos."""
+    
+    # Ruta al archivo de contexto específico
+    context_file_path: Path = Field(
+        default=Path(__file__).parent / "database_context.txt",
+        description="Ruta al archivo de contexto específico de la base de datos"
+    )
+    
+    # Configuración de contexto
+    include_context_in_prompt: bool = Field(
+        default=True,
+        description="Incluir contexto específico en el prompt del agente"
+    )
+    
+    context_max_length: int = Field(
+        default=3000,
+        gt=0,
+        description="Longitud máxima del contexto en caracteres"
+    )
+    
+    @validator('context_file_path')
+    def validate_context_file_exists(cls, v):
+        """Valida que el archivo de contexto exista."""
+        if not Path(v).exists():
+            print(f"⚠️ Advertencia: Archivo de contexto no encontrado en {v}")
+        return v
+    
+    def get_context_content(self) -> str:
+        """
+        Lee y retorna el contenido del archivo de contexto.
+        
+        Returns:
+            Contenido del archivo de contexto truncado según max_length
+        """
+        try:
+            if self.context_file_path.exists():
+                content = self.context_file_path.read_text(encoding='utf-8')
+                if len(content) > self.context_max_length:
+                    content = content[:self.context_max_length] + "\n\n[... contenido truncado ...]"
+                return content
+            else:
+                return "⚠️ Archivo de contexto no disponible."
+        except Exception as e:
+            return f"❌ Error leyendo contexto: {str(e)}"
+    
+
 class APISettings(BaseSettings):
     """Configuración de APIs externas."""
     
@@ -161,6 +208,7 @@ class AppSettings(BaseSettings):
     
     # Configuraciones de sub-módulos
     database: DatabaseSettings = DatabaseSettings()
+    database_context: DatabaseContextSettings = DatabaseContextSettings()
     api: APISettings = APISettings()
     agent: SmolAgentSettings = SmolAgentSettings()
     server: ServerSettings = ServerSettings()
@@ -210,6 +258,7 @@ def print_settings_summary():
     print(f"🌍 Entorno: {settings.environment}")
     print(f"🖥️  Servidor: {settings.server.host}:{settings.server.port}")
     print(f"📊 Base de datos: {settings.database.db_path}")
+    print(f"📋 Contexto BD: {'✅ Habilitado' if settings.database_context.include_context_in_prompt else '❌ Deshabilitado'}")
     print(f"🤖 SmolAgent: {settings.agent.max_steps} pasos máx, verbosidad {settings.agent.verbosity_level}")
     print(f"🔑 API Gemini: {'✅ Configurada' if settings.api.gemini_api_key and settings.api.gemini_api_key != 'TU_API_KEY_DE_GEMINI_AQUI' else '❌ No configurada'}")
     print(f"📝 Logging: {settings.logging.log_level}")

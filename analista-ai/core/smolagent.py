@@ -2,7 +2,8 @@
 Agente SmolAgents para análisis de datos de inseguridad alimentaria.
 
 Este módulo configura un CodeAgent que puede:
-- Consultar la base de datos SQLite usando SQL directo
+- Consultar la base de datos SQLite usando SQL directo y flexible
+- Explorar la estructura de la base de datos dinámicamente
 - Realizar análisis estadísticos con pandas y numpy
 - Autocorregirse si las consultas son incorrectas
 - Iterar hasta obtener resultados correctos
@@ -18,21 +19,13 @@ from .sql_tools import (
     sql_query,
     get_database_schema,
     analyze_data_pandas,
-    get_top_entities,
-    compare_years,
-    calculate_statistics,
     create_formatted_table,
-    get_available_years,
-    get_available_indicators,
-    get_entities_by_level,
-    quick_summary,
+    create_formatted_markdown_table,
     create_chart_visualization,
     create_multiple_charts,
     analyze_and_visualize,
     format_web_citation,
-    create_sources_section,
-    extract_analysis_keywords,
-    create_formatted_markdown_table
+    create_sources_section
 )
 
 
@@ -41,7 +34,10 @@ class InseguridadAlimentariaAgent:
     Agente especializado en análisis de datos de inseguridad alimentaria en Colombia.
     
     Utiliza SmolAgents con LiteLLM para conectar con Gemini y generar análisis
-    inteligentes usando consultas SQL directas, análisis estadísticos, y búsquedas web.
+    inteligentes usando consultas SQL flexibles, análisis estadísticos, y búsquedas web.
+    
+    El agente puede crear sus propias consultas SQL para cualquier análisis requerido,
+    lo que lo hace flexible y adaptable a cambios en la estructura de la base de datos.
     """
     
     def __init__(self):
@@ -80,26 +76,26 @@ class InseguridadAlimentariaAgent:
             )
     
     def _initialize_agent(self):
-        """Inicializa el CodeAgent con todas las herramientas disponibles."""
+        """Inicializa el CodeAgent con las herramientas esenciales y flexibles."""
+        # Herramientas esenciales - flexibles y adaptables
         tools = [
-            sql_query,
-            get_database_schema,
-            analyze_data_pandas,
-            get_top_entities,
-            compare_years,
-            calculate_statistics,
-            create_formatted_table,
-            get_available_years,
-            get_available_indicators,
-            get_entities_by_level,
-            quick_summary,
-            create_chart_visualization,
-            create_multiple_charts,
-            analyze_and_visualize,
-            format_web_citation,
-            create_sources_section,
-            extract_analysis_keywords,
-            create_formatted_markdown_table
+            # Herramientas principales para acceso a datos
+            sql_query,                          # Consultas SQL flexibles 
+            get_database_schema,                # Exploración de estructura
+            analyze_data_pandas,                # Análisis estadístico avanzado
+            
+            # Herramientas de presentación y formato
+            create_formatted_table,             # Tablas básicas
+            create_formatted_markdown_table,    # Tablas Markdown correctas
+            
+            # Herramientas de visualización
+            create_chart_visualization,         # Gráficas individuales
+            create_multiple_charts,             # Múltiples gráficas
+            analyze_and_visualize,              # Análisis completo con gráficas
+            
+            # Herramientas de fuentes y documentación
+            format_web_citation,                # Formateo de citas
+            create_sources_section              # Sección de fuentes
         ]
         
         # Agregar herramienta de búsqueda web si está disponible
@@ -116,6 +112,8 @@ class InseguridadAlimentariaAgent:
             max_steps=agent_config.max_steps,
             verbosity_level=agent_config.verbosity_level
         )
+        
+        print(f"🤖 Agente inicializado con {len(tools)} herramientas esenciales")
     
     def analyze_question(self, question: str) -> str:
         """
@@ -123,11 +121,13 @@ class InseguridadAlimentariaAgent:
         
         El agente:
         1. Interpreta la pregunta
-        2. Decide qué herramientas usar
-        3. Escribe código Python para consultar los datos
-        4. Analiza los resultados
+        2. Explora la estructura de la base de datos si es necesario
+        3. Crea consultas SQL flexibles según lo requiera
+        4. Analiza los resultados con pandas
         5. Se autocorrige si algo está mal
-        6. Genera una respuesta en Markdown
+        6. Genera visualizaciones apropiadas
+        7. Complementa con búsquedas web si es útil
+        8. Produce una respuesta completa en Markdown con palabras clave inteligentes
         
         Args:
             question: Pregunta del usuario en lenguaje natural
@@ -156,102 +156,141 @@ class InseguridadAlimentariaAgent:
         """
         web_search_status = "✅ Disponible" if self.web_search_tool else "❌ No disponible"
         
+        # Obtener contexto específico de la base de datos si está habilitado
+        specific_context = ""
+        if self.settings.database_context.include_context_in_prompt:
+            specific_context = self.settings.database_context.get_context_content()
+        
         context = f"""
-Eres un analista experto en datos de inseguridad alimentaria en Colombia. 
+Eres un analista experto en datos. Eres COMPLETAMENTE FLEXIBLE y DINÁMICO.
 
-CONTEXTO DE LA BASE DE DATOS:
-- Tienes acceso a datos normalizados de inseguridad alimentaria en Colombia
-- Los datos incluyen información nacional, regional, departamental y municipal
-- Período: principalmente 2022-2024, con algunos datos de 2015
-- 3 indicadores principales:
-  1. "Inseguridad Alimentaria Grave" 
-  2. "Inseguridad Alimentaria Moderado o Grave"
-  3. "Prevalencia de hogares en inseguridad alimentaria"
+{specific_context if specific_context else ""}
+{"=" * 50 if specific_context else ""}
+
+FILOSOFÍA DE TRABAJO:
+- Eres FLEXIBLE y ADAPTABLE: puedes trabajar con CUALQUIER base de datos
+- NO asumes NADA sobre la estructura de datos - la descubres dinámicamente
+- SIEMPRE exploras la base de datos primero si no conoces su estructura
+- Creas análisis personalizados para cada pregunta específica
+- Te adaptas a cualquier dominio de datos (alimentaria, salud, economía, etc.)
 
 HERRAMIENTAS DISPONIBLES:
-- sql_query: Para consultas SQL directas
-- get_database_schema: Para explorar la estructura de datos
-- analyze_data_pandas: Para análisis estadísticos avanzados
-- get_top_entities: Para rankings de entidades
-- compare_years: Para análisis temporal
-- calculate_statistics: Para estadísticas descriptivas
-- create_formatted_table: Para tablas básicas
-- create_formatted_markdown_table: Para tablas Markdown correctamente formateadas
-- create_chart_visualization: Para crear gráficas individuales con matplotlib
-- create_multiple_charts: Para crear múltiples gráficas
-- analyze_and_visualize: Para análisis completo con gráficas automáticas
-- WebSearchTool: {web_search_status} - Para búsquedas complementarias en internet
-- format_web_citation: Para formatear citas de fuentes web en estilo APA
-- create_sources_section: Para crear secciones de "Fuentes Consultadas" bien formateadas
-- extract_analysis_keywords: Para generar palabras clave del análisis realizado
 
-INSTRUCCIONES PARA BÚSQUEDAS WEB:
-1. Usa búsquedas web SOLO para complementar el análisis de datos locales
-2. Busca información contextual como:
-   - Políticas públicas de seguridad alimentaria en Colombia
-   - Causas de inseguridad alimentaria (conflicto, cambio climático, etc.)
-   - Comparaciones internacionales o regionales
-   - Programas gubernamentales relacionados
-   - Noticias recientes sobre el tema
-3. NO uses búsquedas web para datos estadísticos básicos (usa la base de datos local)
-4. Combina los resultados de búsquedas web con tus análisis de datos
-5. Usa términos de búsqueda en español e inglés según sea apropiado
+🔍 EXPLORACIÓN Y CONSULTA (Principales):
+- sql_query: Tu herramienta MÁS IMPORTANTE - ejecuta cualquier SQL que necesites
+- get_database_schema: Explora la estructura completa de CUALQUIER base de datos
+- analyze_data_pandas: Análisis estadístico avanzado de cualquier resultado SQL
 
-INSTRUCCIONES OBLIGATORIAS PARA CITAR FUENTES WEB:
-1. SIEMPRE incluye una sección "## 📚 Fuentes Consultadas" al final de tu respuesta
-2. Cita TODAS las fuentes web utilizadas usando este formato:
-   - Autor/Organización. (Fecha). *Título del artículo/página*. Sitio Web. URL
-   - Si no hay autor: *Título del artículo/página*. (Fecha). Sitio Web. URL
-   - Si no hay fecha: Autor/Organización. (s.f.). *Título del artículo/página*. Sitio Web. URL
-3. Incluye URLs completas y funcionales
-4. En el texto, referencia las fuentes como: "Según [Nombre de la fuente], ..." o "(Fuente: [Nombre])"
-5. Separa claramente la información de fuentes web de los datos locales de la base de datos
-6. Si usas múltiples fuentes web, númbralas: [1], [2], etc. y lista todas al final
+📊 PRESENTACIÓN Y FORMATO:
+- create_formatted_table: Tablas básicas
+- create_formatted_markdown_table: Tablas Markdown perfectamente formateadas
 
-EJEMPLO DE CITACIÓN:
-📚 **Fuentes Consultadas:**
-1. Ministerio de Salud de Colombia. (2024). *Política Nacional de Seguridad Alimentaria*. MinSalud. https://www.minsalud.gov.co/politica-seguridad-alimentaria
-2. *Colombia: Inseguridad alimentaria en aumento*. (2024). FAO Colombia. https://www.fao.org/colombia/noticias/inseguridad-alimentaria
+📈 VISUALIZACIÓN:
+- create_chart_visualization: Gráficas individuales (bar, line, pie, scatter, histogram)
+- create_multiple_charts: Múltiples visualizaciones
+- analyze_and_visualize: Análisis completo con gráficas automáticas
 
-INSTRUCCIONES PARA TABLAS MARKDOWN:
-1. SIEMPRE usa create_formatted_markdown_table para tablas de datos importantes
-2. Formato correcto de tabla Markdown:
-   | Columna 1 | Columna 2 | Columna 3 |
-   |-----------|-----------|-----------|
-   | Dato 1    | Dato 2    | Dato 3    |
-3. NUNCA uses espacios irregulares en las tablas
-4. Asegúrate de que cada fila tenga el mismo número de columnas
-5. Usa títulos descriptivos para las tablas
-6. Para datos numéricos, formatea apropiadamente (porcentajes, decimales)
+📚 DOCUMENTACIÓN:
+- format_web_citation: Formateo de citas en estilo APA
+- create_sources_section: Secciones de fuentes bien formateadas
+- WebSearchTool: {web_search_status} - Para información contextual complementaria
 
-INSTRUCCIONES PARA VISUALIZACIONES:
-1. SIEMPRE incluye gráficas cuando sea apropiado para mostrar datos
-2. Usa create_chart_visualization para gráficas específicas
-3. Usa analyze_and_visualize para análisis completos con visualizaciones automáticas
-4. Los tipos de gráficas disponibles son: bar, line, pie, scatter, histogram
-5. Las herramientas son TOKEN-EFICIENTES: solo retornan confirmaciones cortas
-6. Las gráficas se almacenan temporalmente y aparecen automáticamente en el frontend
-7. NO esperes recibir imágenes base64 en las respuestas de las herramientas
-8. Incluye títulos descriptivos y especifica columnas para mejor visualización
+METODOLOGÍA DE TRABAJO DINÁMICA:
 
-INSTRUCCIONES PARA PALABRAS CLAVE:
-1. AL FINAL de tu análisis, SIEMPRE usa extract_analysis_keywords para generar palabras clave
-2. Las palabras clave ayudan al usuario a identificar rápidamente los temas principales
-3. Incluye tanto términos geográficos como conceptos estadísticos
-4. Las palabras clave aparecerán automáticamente en el frontend como tags
+1. 🔍 EXPLORACIÓN INICIAL OBLIGATORIA:
+   - SIEMPRE usa get_database_schema PRIMERO si no conoces la estructura
+   - NO asumas nombres de tablas, columnas o tipos de datos
+   - Identifica tablas disponibles, columnas, tipos de datos y relaciones
+   - Detecta patrones temporales, categóricos y numéricos automáticamente
 
-INSTRUCCIONES GENERALES:
-1. SIEMPRE empieza explorando la base de datos si no estás seguro del esquema
-2. Usa consultas SQL precisas y bien estructuradas
-3. Si una consulta falla, analiza el error y corrígela
-4. Proporciona análisis estadísticos relevantes
-5. Presenta los resultados en formato Markdown estructurado
-6. Incluye contexto y interpretación de los datos
-7. Si los datos son limitados, menciona las limitaciones
-8. Complementa con búsquedas web cuando sea útil para el contexto
-9. Usa tablas Markdown correctamente formateadas para mostrar datos tabulares
-10. Genera palabras clave al final para resumir el análisis
-11. TODAS LAS PREGUNTAS DEBEN SER ENFOCADAS EN EL ANÁLISIS DE INSEGURIDAD ALIMENTARIA EN COLOMBIA
+2. 📝 CONSULTAS SQL COMPLETAMENTE DINÁMICAS:
+   - Construye consultas basadas SOLO en la información del esquema actual
+   - Usa los nombres reales de tablas y columnas que encontraste
+   - Aprovecha las claves foráneas detectadas para JOINs apropiados
+   - Adapta tu análisis al tipo de datos disponible
+
+3. 📊 ANÁLISIS INTELIGENTE Y CONTEXTUAL:
+   - Usa analyze_data_pandas para estadísticas profundas de cualquier dato
+   - Interpreta los resultados en el contexto del dominio detectado
+   - Identifica patrones, outliers, tendencias sin asumir el tipo de datos
+
+4. 📈 VISUALIZACIÓN APROPIADA:
+   - Elige gráficas basándote en el tipo de datos que encontraste
+   - Usa columnas reales para ejes X e Y
+   - Títulos descriptivos basados en datos reales
+
+5. 🌐 CONTEXTO COMPLEMENTARIO INTELIGENTE:
+   - Usa búsquedas web para contexto relevante al dominio detectado
+   - Adapta términos de búsqueda al tema de los datos
+   - Al final, usa create_sources_section para formatear automáticamente todas las fuentes web
+
+INSTRUCCIONES OBLIGATORIAS:
+
+✅ SIEMPRE EXPLORA PRIMERO:
+- Comienza OBLIGATORIAMENTE con get_database_schema
+- NO asumas NADA sobre nombres de tablas o columnas
+- Basa TODO tu análisis en la información real del esquema
+
+✅ SQL COMPLETAMENTE DINÁMICO:
+- Construye consultas usando nombres reales de tablas/columnas
+- Usa las relaciones detectadas automáticamente
+- Adapta filtros y agrupaciones a los datos disponibles
+- Nunca hardcodees nombres de tablas o campos
+
+✅ FORMATO PROFESIONAL:
+- Usa create_formatted_markdown_table para datos tabulares importantes
+- Incluye visualizaciones apropiadas para el tipo de datos
+- Estructura tu respuesta en Markdown claro
+
+✅ CITAS Y FUENTES:
+- Si usas búsquedas web, usa SOLO la herramienta create_sources_section al final
+- NO crees manualmente secciones "Fuentes Consultadas" - usa la herramienta
+- Formato APA automático para todas las fuentes web
+- Separa claramente datos locales de información web
+
+✅ PALABRAS CLAVE INTELIGENTES:
+- AL FINAL de tu análisis, incluye una sección "## 🏷️ Palabras Clave"
+- Genera 5-10 palabras clave relevantes basándote en tu análisis realizado
+- Incluye términos reales encontrados en los datos (nombres de tablas, columnas importantes, valores categóricos relevantes)
+- Formato: "**Palabras clave:** [palabra1], [palabra2], [palabra3], ..."
+- SÉ INTELIGENTE: basa las palabras clave en el contenido real de tu análisis
+
+EJEMPLOS DE METODOLOGÍA DINÁMICA:
+
+🎯 Paso 1 - Exploración:
+```
+1. get_database_schema() -> descubrir tablas "productos", "ventas", "clientes"
+2. Identificar relaciones: ventas.producto_id → productos.id
+3. Detectar columnas temporales: ventas.fecha
+4. Detectar categóricas: productos.categoria, clientes.region
+```
+
+🎯 Paso 2 - Consulta dinámica:
+```sql
+-- Basado en esquema real descubierto
+SELECT p.categoria, SUM(v.monto) as total_ventas
+FROM ventas v 
+JOIN productos p ON v.producto_id = p.id
+WHERE v.fecha >= '2023-01-01'
+GROUP BY p.categoria 
+ORDER BY total_ventas DESC
+```
+
+🎯 Adaptabilidad:
+- Si los datos son de salud: busca patrones médicos, usa terminología de salud
+- Si son financieros: busca tendencias económicas, usa términos financieros  
+- Si son alimentarios: busca patrones nutricionales, usa contexto de seguridad alimentaria
+- El agente se adapta automáticamente al dominio de los datos
+
+REGLAS CRÍTICAS:
+❌ NUNCA asumas nombres de tablas específicas
+❌ NUNCA uses queries hardcodeadas  
+❌ NUNCA hagas suposiciones sobre la estructura de datos
+❌ NUNCA crees manualmente secciones "Fuentes Consultadas"
+✅ SIEMPRE explora primero con get_database_schema
+✅ SIEMPRE construye queries dinámicamente
+✅ SIEMPRE adapta tu análisis al tipo de datos encontrado
+✅ USA create_sources_section para fuentes web (evita duplicados)
 
 PREGUNTA DEL USUARIO:
 """
@@ -274,10 +313,10 @@ PREGUNTA DEL USUARIO:
 {result}
 
 ## Metodología
-Este análisis fue generado usando consultas SQL directas sobre la base de datos normalizada de inseguridad alimentaria de Colombia, con análisis estadísticos usando pandas y numpy.
+Este análisis fue generado usando consultas SQL flexibles sobre la base de datos de inseguridad alimentaria de Colombia, con análisis estadísticos usando pandas y numpy, y visualizaciones con matplotlib.
 
 ---
-*Generado por el Analista AI especializado en datos de inseguridad alimentaria, puede cometer errores, por favor verifica la respuesta y corrige los errores.*
+*Generado por el Analista AI especializado en datos de inseguridad alimentaria. Puede cometer errores, por favor verifica la respuesta.*
 """
         return formatted
     
@@ -296,17 +335,24 @@ Este análisis fue generado usando consultas SQL directas sobre la base de datos
 ## Posibles Soluciones
 1. **Verificar la configuración**: Asegúrate de que GEMINI_API_KEY esté configurada
 2. **Reformular la pregunta**: Intenta ser más específico sobre qué datos necesitas
-3. **Revisar la base de datos**: Los datos están disponibles principalmente para 2022-2024
+3. **Revisar la base de datos**: Usa get_database_schema para explorar los datos disponibles
 
 ## Ejemplos de Preguntas Válidas
-- "¿Cuál es la situación de inseguridad alimentaria en Colombia?"
-- "¿Qué departamentos tienen mayor inseguridad alimentaria grave en 2022?"
-- "¿Cómo evolucionó la inseguridad alimentaria en Antioquia?"
-- "¿Cuáles son las estadísticas descriptivas de inseguridad alimentaria moderada en 2023?"
+- "¿Cuál es la situación actual de inseguridad alimentaria en Colombia?"
+- "¿Qué departamentos tienen mayor inseguridad alimentaria grave?"
+- "¿Cómo ha evolucionado la inseguridad alimentaria en los últimos años?"
+- "¿Cuáles son las estadísticas de inseguridad alimentaria por regiones?"
+- "Compara la inseguridad alimentaria entre departamentos de la costa y del interior"
 
+## Capacidades del Agente
+- 🔍 Exploración dinámica de la base de datos
+- 📊 Consultas SQL flexibles y personalizadas  
+- 📈 Análisis estadísticos avanzados
+- 📋 Visualizaciones automáticas
+- 🌐 Información contextual web complementaria
 
 ---
-*Por favor, verifica la configuración e intenta nuevamente*
+*El agente es flexible y puede adaptarse a cualquier pregunta sobre inseguridad alimentaria*
 """
     
     def get_database_info(self) -> str:
@@ -380,7 +426,8 @@ Este análisis fue generado usando consultas SQL directas sobre la base de datos
 # Instancia global del agente
 try:
     food_security_agent = InseguridadAlimentariaAgent()
-    print("✅ Agente SmolAgents inicializado correctamente")
+    print("✅ Agente SmolAgents flexible inicializado correctamente")
+    print("🔧 El agente puede crear consultas SQL dinámicas para cualquier análisis")
 except Exception as e:
     print(f"❌ Error inicializando agente: {e}")
     food_security_agent = None 

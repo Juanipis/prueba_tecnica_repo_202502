@@ -1,0 +1,76 @@
+CONTEXTO ESPECÍFICO DE LA BASE DE DATOS
+=========================================
+
+🍽️ DOMINIO: INSEGURIDAD ALIMENTARIA EN COLOMBIA
+
+Esta base de datos contiene información normalizada sobre inseguridad alimentaria en Colombia, procesada mediante un ETL que convierte archivos Excel originales en una estructura SQL optimizada.
+
+📊 ORIGEN DE LOS DATOS:
+- Archivos Excel gubernamentales sobre inseguridad alimentaria
+- Procesan datos de 2015 a 2024 (principalmente 2022-2024)
+- Cobertura: Nacional, Regional, Departamental y Municipal
+- Total aproximado: ~3,450 registros de mediciones
+
+🗺️ JERARQUÍA GEOGRÁFICA:
+- NACIONAL: Colombia (nivel superior)
+- REGIONAL: Regiones de Colombia (ej: Atlántica, Central, Oriental, etc.)
+- DEPARTAMENTAL: 32 departamentos colombianos (ej: Antioquia, Atlántico, Bogotá D.C.)
+- MUNICIPAL: 1,103+ municipios colombianos (ej: Medellín, Barranquilla, Cartagena)
+
+📈 INDICADORES DISPONIBLES:
+1. "Inseguridad Alimentaria Grave"
+   - Tipo: Porcentaje 
+   - Medida: Prevalencia
+   - Cobertura: Principalmente departamental (2022-2023)
+
+2. "Inseguridad Alimentaria Moderado o Grave" 
+   - Tipo: Porcentaje
+   - Medida: Prevalencia
+   - Cobertura: Principalmente municipal (2022-2024)
+
+3. "Prevalencia de hogares en inseguridad alimentaria" 
+   - Tipo: Porcentaje
+   - Medida: Prevalencia  
+   - Cobertura: Principalmente regional (2015)
+
+⏰ PERÍODO TEMPORAL:
+- Datos históricos: 2015 (regionales)
+- Datos principales: 2022-2024 (departamentales y municipales)
+- Enfoque principal en los años más recientes
+
+🔍 TIPOS DE ANÁLISIS POSIBLES:
+- Comparaciones geográficas (entre departamentos, municipios, regiones)
+- Evolución temporal (cambios año a año)
+- Rankings de inseguridad alimentaria por nivel geográfico
+- Análisis de disparidades regionales
+- Correlaciones entre niveles geográficos
+- Estadísticas descriptivas por indicador
+- Identificación de municipios/departamentos más vulnerables
+
+🎯 CONTEXTO INTERPRETATIVO:
+- Valores más altos = Mayor inseguridad alimentaria = Situación más preocupante
+- Los porcentajes representan la proporción de población/hogares en situación de inseguridad
+- Colombia como país tiene desafíos significativos de seguridad alimentaria
+- Hay variaciones importantes entre regiones y departamentos
+- El período 2022-2024 refleja condiciones post-pandemia
+
+🚨 CONSIDERACIONES IMPORTANTES:
+- Los datos pueden tener diferentes metodologías según el año
+- No todos los indicadores están disponibles para todos los niveles geográficos
+- Algunos municipios pueden tener datos limitados
+- Los valores están normalizados como decimales (ej: 0.05 = 5%)
+
+💡 PATRONES ESPERADOS:
+- Departamentos de la costa Caribe suelen tener mayor inseguridad
+- Municipios rurales y alejados tienden a tener indicadores más altos
+- Centros urbanos principales (Bogotá, Medellín, Cali) suelen tener mejores indicadores
+- Hay correlación entre desarrollo económico departamental e inseguridad alimentaria
+
+🔗 TÉRMINOS CLAVE PARA BÚSQUEDAS WEB COMPLEMENTARIAS:
+- "Seguridad alimentaria Colombia"
+- "Política alimentaria Colombia"
+- "DANE inseguridad alimentaria"
+- "FAO Colombia"
+- "Malnutrición Colombia"
+- "Programas alimentarios Colombia"
+- "PMA Colombia" (Programa Mundial de Alimentos) 

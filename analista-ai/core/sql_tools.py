@@ -1,25 +1,23 @@
 """
 Herramientas SmolAgents para el análisis de datos de inseguridad alimentaria.
 
-Este módulo contiene las herramientas que el agente puede usar para:
-- Consultar la base de datos SQLite
-- Realizar análisis estadísticos
-- Generar insights sobre los datos
+Este módulo contiene las herramientas esenciales que el agente puede usar para:
+- Consultar la base de datos SQLite con SQL flexible
+- Explorar el esquema de la base de datos
+- Realizar análisis estadísticos con pandas
 - Crear visualizaciones con matplotlib (token-eficiente)
-- Formatear citas de fuentes web correctamente
+- Formatear tablas y citas de fuentes web correctamente
 """
 
 import sqlite3
 import pandas as pd
 import numpy as np
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Dict, Any
 from smolagents import tool
 import base64
 from io import BytesIO
 import uuid
-import re
-from datetime import datetime
 
 # Ruta a la base de datos - se importará dinámicamente
 from .settings import get_settings
@@ -62,139 +60,22 @@ def clear_stored_images():
 
 
 @tool
-def format_web_citation(source_info: str, citation_style: str = "apa") -> str:
-    """
-    Ayuda a formatear citas de fuentes web de manera consistente y profesional.
-    
-    Args:
-        source_info: Información de la fuente en formato libre (ej: "título, autor, fecha, URL")
-        citation_style: Estilo de citación ("apa", "simple")
-        
-    Returns:
-        Cita formateada según el estilo especificado
-        
-    Examples:
-        format_web_citation("Políticas de seguridad alimentaria, MinSalud Colombia, 2024, https://minsalud.gov.co/politicas")
-        -> "MinSalud Colombia. (2024). *Políticas de seguridad alimentaria*. https://minsalud.gov.co/politicas"
-    """
-    try:
-        if citation_style.lower() == "apa":
-            # Intentar extraer componentes de la información
-            parts = [part.strip() for part in source_info.split(',')]
-            
-            # Plantilla básica para APA
-            if len(parts) >= 3:
-                title = parts[0] if parts[0] else "Título no disponible"
-                author = parts[1] if len(parts) > 1 and parts[1] else "Autor no disponible"
-                date = parts[2] if len(parts) > 2 and parts[2] else "s.f."
-                url = parts[3] if len(parts) > 3 and parts[3] else ""
-                
-                # Formatear fecha si es un año
-                if date.isdigit() and len(date) == 4:
-                    date = f"({date})"
-                elif date == "s.f.":
-                    date = "(s.f.)"
-                else:
-                    date = f"({date})"
-                
-                # Formatear cita APA
-                citation = f"{author}. {date}. *{title}*."
-                if url:
-                    citation += f" {url}"
-                
-                return citation
-            else:
-                return f"Información insuficiente para formatear cita APA: {source_info}"
-        
-        elif citation_style.lower() == "simple":
-            # Formato simple: solo fuente y URL
-            parts = source_info.split(',')
-            if len(parts) >= 2:
-                source_name = parts[0].strip()
-                url = parts[-1].strip() if 'http' in parts[-1] else ""
-                return f"Fuente: {source_name}. {url}" if url else f"Fuente: {source_name}"
-            else:
-                return f"Fuente: {source_info}"
-        
-        else:
-            return f"Estilo de citación '{citation_style}' no soportado. Use 'apa' o 'simple'."
-            
-    except Exception as e:
-        return f"Error formateando cita: {str(e)}. Información original: {source_info}"
-
-
-@tool
-def create_sources_section(sources_list: str) -> str:
-    """
-    Crea una sección de fuentes consultadas bien formateada.
-    
-    Args:
-        sources_list: Lista de fuentes separadas por punto y coma (;)
-                     Formato: "fuente1_info; fuente2_info; ..."
-        
-    Returns:
-        Sección de fuentes formateada en Markdown
-        
-    Example:
-        create_sources_section("Políticas alimentarias, MinSalud, 2024, url1; Estadísticas FAO, FAO Colombia, 2023, url2")
-    """
-    try:
-        sources = [source.strip() for source in sources_list.split(';') if source.strip()]
-        
-        if not sources:
-            return "No se proporcionaron fuentes para formatear."
-        
-        formatted_section = "\n## 📚 Fuentes Consultadas\n\n"
-        
-        for i, source in enumerate(sources, 1):
-            formatted_citation = format_web_citation(source, "apa")
-            formatted_section += f"{i}. {formatted_citation}\n"
-        
-        formatted_section += "\n---\n*Fuentes consultadas para complementar el análisis de datos locales*\n"
-        
-        return formatted_section
-        
-    except Exception as e:
-        return f"Error creando sección de fuentes: {str(e)}"
-
-
-@tool
 def sql_query(query: str) -> str:
     """
-    Ejecuta una consulta SQL en la base de datos de inseguridad alimentaria de Colombia.
+    Ejecuta una consulta SQL en la base de datos.
     
-    La base de datos contiene tres tablas principales:
-    
-    Tabla 'geografia':
-    - id_geografia: INTEGER (clave primaria)
-    - nivel: TEXT (Nacional, Regional, Departamental, Municipal)
-    - nombre: TEXT (nombre de la entidad geográfica)
-    - id_padre: INTEGER (referencia jerárquica, puede ser NULL)
-    - codigo_dane: TEXT (código DANE, puede ser NULL)
-    
-    Tabla 'indicadores':
-    - id_indicador: INTEGER (clave primaria)
-    - nombre_indicador: TEXT (nombre del indicador)
-    - tipo_dato: TEXT (tipo de dato, ej: "Porcentaje")
-    - tipo_de_medida: TEXT (metodología, ej: "Prevalencia")
-    
-    Tabla 'datos_medicion':
-    - id_medicion: INTEGER (clave primaria)
-    - id_geografia: INTEGER (referencia a geografia)
-    - id_indicador: INTEGER (referencia a indicadores)
-    - año: INTEGER (año de la medición)
-    - valor: REAL (valor numérico del indicador)
-    
-    Relaciones:
-    - datos_medicion.id_geografia → geografia.id_geografia
-    - datos_medicion.id_indicador → indicadores.id_indicador
-    - geografia.id_padre → geografia.id_geografia (jerarquía)
+    Esta es la herramienta principal para acceder a los datos. El agente puede crear
+    cualquier consulta SQL necesaria para obtener la información requerida.
     
     Args:
         query: Consulta SQL a ejecutar. Debe ser SQL válido.
         
     Returns:
         Resultados de la consulta como string formatado, o mensaje de error.
+        
+    Ejemplo de uso:
+        sql_query("SELECT * FROM geografia WHERE nivel = 'Departamental' LIMIT 5")
+        sql_query("SELECT g.nombre, AVG(dm.valor) as promedio FROM datos_medicion dm JOIN geografia g ON dm.id_geografia = g.id_geografia WHERE dm.año = 2022 GROUP BY g.nombre ORDER BY promedio DESC LIMIT 10")
     """
     try:
         # Obtener ruta de la base de datos desde configuración
@@ -246,50 +127,174 @@ def get_database_schema() -> str:
     """
     Obtiene información detallada sobre el esquema de la base de datos.
     
+    Esta herramienta es esencial para que el agente comprenda la estructura
+    de datos disponible y pueda crear consultas SQL apropiadas.
+    
+    COMPLETAMENTE DINÁMICO: No asume nada sobre la estructura de la base de datos.
+    
     Returns:
-        Descripción completa de las tablas, columnas y relaciones.
+        Descripción completa de las tablas, columnas, tipos de datos, relaciones y contenido de muestra.
     """
     try:
         db_path = get_db_path()
         with sqlite3.connect(db_path) as conn:
             cursor = conn.cursor()
             
-            schema_info = "ESQUEMA DE BASE DE DATOS - INSEGURIDAD ALIMENTARIA COLOMBIA\n"
-            schema_info += "=" * 65 + "\n\n"
+            schema_info = "ESQUEMA COMPLETO DE LA BASE DE DATOS\n"
+            schema_info += "=" * 45 + "\n\n"
             
             # Obtener lista de tablas
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
             tables = cursor.fetchall()
             
+            if not tables:
+                return "⚠️ No se encontraron tablas en la base de datos."
+            
+            schema_info += f"🗃️ TOTAL DE TABLAS: {len(tables)}\n\n"
+            
+            # Información detallada de cada tabla
             for table_name in tables:
                 table_name = table_name[0]
-                schema_info += f"TABLA: {table_name}\n"
-                schema_info += "-" * 30 + "\n"
+                schema_info += f"📊 TABLA: {table_name}\n"
+                schema_info += "-" * 40 + "\n"
                 
                 # Obtener información de columnas
                 cursor.execute(f"PRAGMA table_info({table_name})")
                 columns = cursor.fetchall()
                 
+                schema_info += "COLUMNAS:\n"
+                primary_keys = []
                 for col in columns:
                     col_id, name, data_type, not_null, default, is_pk = col
-                    pk_marker = " (PK)" if is_pk else ""
+                    if is_pk:
+                        primary_keys.append(name)
+                    
+                    pk_marker = " (CLAVE PRIMARIA)" if is_pk else ""
                     null_marker = " NOT NULL" if not_null else ""
                     default_marker = f" DEFAULT {default}" if default else ""
                     
-                    schema_info += f"  {name}: {data_type}{pk_marker}{null_marker}{default_marker}\n"
+                    schema_info += f"  • {name}: {data_type}{pk_marker}{null_marker}{default_marker}\n"
+                
+                # Obtener información de claves foráneas
+                cursor.execute(f"PRAGMA foreign_key_list({table_name})")
+                foreign_keys = cursor.fetchall()
+                
+                if foreign_keys:
+                    schema_info += "\nCLAVES FORÁNEAS:\n"
+                    for fk in foreign_keys:
+                        id_fk, seq, table_ref, from_col, to_col, on_update, on_delete, match = fk
+                        schema_info += f"  • {from_col} → {table_ref}.{to_col}\n"
                 
                 # Obtener conteo de registros
                 cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
                 count = cursor.fetchone()[0]
-                schema_info += f"  Total registros: {count}\n\n"
+                schema_info += f"\nTOTAL REGISTROS: {count:,}\n"
+                
+                # Mostrar muestra de datos (primeras 3 filas)
+                if count > 0:
+                    cursor.execute(f"SELECT * FROM {table_name} LIMIT 3")
+                    sample_data = cursor.fetchall()
+                    
+                    if sample_data:
+                        schema_info += "\nMUESTRA DE DATOS (primeras 3 filas):\n"
+                        col_names = [description[0] for description in cursor.description]
+                        for i, row in enumerate(sample_data, 1):
+                            schema_info += f"  Fila {i}:\n"
+                            for col_name, value in zip(col_names, row):
+                                # Truncar valores muy largos para legibilidad
+                                display_value = str(value)
+                                if len(display_value) > 50:
+                                    display_value = display_value[:47] + "..."
+                                schema_info += f"    {col_name}: {display_value}\n"
+                else:
+                    schema_info += "\n⚠️ Tabla vacía (sin registros)\n"
+                
+                schema_info += "\n" + "="*40 + "\n\n"
             
-            # Información adicional sobre indicadores
-            cursor.execute("SELECT nombre_indicador FROM indicadores")
-            indicadores = cursor.fetchall()
-            schema_info += "INDICADORES DISPONIBLES:\n"
-            schema_info += "-" * 25 + "\n"
-            for ind in indicadores:
-                schema_info += f"  - {ind[0]}\n"
+            # Detectar automáticamente patrones comunes de datos
+            schema_info += "🔍 ANÁLISIS AUTOMÁTICO DE PATRONES:\n"
+            schema_info += "-" * 35 + "\n"
+            
+            # Detectar columnas que podrían ser fechas/años
+            date_patterns = []
+            for table_name in [t[0] for t in tables]:
+                cursor.execute(f"PRAGMA table_info({table_name})")
+                columns = cursor.fetchall()
+                for col in columns:
+                    col_name = col[1].lower()
+                    if any(keyword in col_name for keyword in ['año', 'year', 'fecha', 'date', 'time']):
+                        try:
+                            cursor.execute(f"SELECT DISTINCT {col[1]} FROM {table_name} ORDER BY {col[1]} LIMIT 10")
+                            values = cursor.fetchall()
+                            if values:
+                                date_patterns.append(f"  • {table_name}.{col[1]}: {[v[0] for v in values[:5]]}...")
+                        except:
+                            pass
+            
+            if date_patterns:
+                schema_info += "📅 COLUMNAS TEMPORALES DETECTADAS:\n"
+                schema_info += "\n".join(date_patterns) + "\n\n"
+            
+            # Detectar columnas que podrían ser categóricas importantes
+            categorical_patterns = []
+            for table_name in [t[0] for t in tables]:
+                cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
+                total_records = cursor.fetchone()[0]
+                
+                if total_records > 0:
+                    cursor.execute(f"PRAGMA table_info({table_name})")
+                    columns = cursor.fetchall()
+                    for col in columns:
+                        if col[2].upper() in ['TEXT', 'VARCHAR']:  # Solo columnas de texto
+                            try:
+                                cursor.execute(f"SELECT COUNT(DISTINCT {col[1]}) as unique_count FROM {table_name}")
+                                unique_count = cursor.fetchone()[0]
+                                # Si hay pocas categorías distintas comparado con el total, es probablemente categórica
+                                if unique_count <= min(20, total_records * 0.5):
+                                    cursor.execute(f"SELECT DISTINCT {col[1]} FROM {table_name} LIMIT 5")
+                                    sample_values = [v[0] for v in cursor.fetchall()]
+                                    categorical_patterns.append(f"  • {table_name}.{col[1]} ({unique_count} valores): {sample_values}...")
+                            except:
+                                pass
+            
+            if categorical_patterns:
+                schema_info += "🏷️ COLUMNAS CATEGÓRICAS DETECTADAS:\n"
+                schema_info += "\n".join(categorical_patterns[:10]) + "\n\n"  # Limitar a 10 para no saturar
+            
+            # Detectar columnas numéricas importantes
+            numeric_patterns = []
+            for table_name in [t[0] for t in tables]:
+                cursor.execute(f"PRAGMA table_info({table_name})")
+                columns = cursor.fetchall()
+                for col in columns:
+                    if col[2].upper() in ['INTEGER', 'REAL', 'NUMERIC', 'DECIMAL', 'FLOAT']:
+                        try:
+                            cursor.execute(f"SELECT MIN({col[1]}), MAX({col[1]}), COUNT(*) FROM {table_name} WHERE {col[1]} IS NOT NULL")
+                            min_val, max_val, count = cursor.fetchone()
+                            if count > 0:
+                                numeric_patterns.append(f"  • {table_name}.{col[1]}: rango [{min_val}, {max_val}] ({count} valores)")
+                        except:
+                            pass
+            
+            if numeric_patterns:
+                schema_info += "📊 COLUMNAS NUMÉRICAS DETECTADAS:\n"
+                schema_info += "\n".join(numeric_patterns[:10]) + "\n\n"
+            
+            # Resumen final con sugerencias genéricas
+            schema_info += "💡 SUGERENCIAS GENERALES PARA CONSULTAS:\n"
+            schema_info += "-" * 40 + "\n"
+            schema_info += "• Explora los datos: SELECT * FROM [nombre_tabla] LIMIT 10\n"
+            schema_info += "• Cuenta registros: SELECT COUNT(*) FROM [nombre_tabla]\n"
+            schema_info += "• Valores únicos: SELECT DISTINCT [columna] FROM [nombre_tabla]\n"
+            schema_info += "• Agrupaciones: SELECT [columna], COUNT(*) FROM [nombre_tabla] GROUP BY [columna]\n"
+            schema_info += "• Unir tablas: usa las claves foráneas detectadas arriba para JOIN\n"
+            schema_info += "• Estadísticas: SELECT AVG([columna_numerica]), MIN([columna_numerica]), MAX([columna_numerica]) FROM [nombre_tabla]\n\n"
+            
+            schema_info += "🎯 ESTRATEGIA RECOMENDADA:\n"
+            schema_info += "1. Empieza explorando tablas individuales\n"
+            schema_info += "2. Identifica las relaciones entre tablas usando las claves foráneas\n"
+            schema_info += "3. Construye consultas JOIN según necesites\n"
+            schema_info += "4. Usa columnas temporales y categóricas para filtros específicos\n"
             
             return schema_info
             
@@ -300,16 +305,17 @@ def get_database_schema() -> str:
 @tool
 def analyze_data_pandas(query: str) -> str:
     """
-    Ejecuta una consulta SQL y retorna los datos como DataFrame de pandas para análisis.
+    Ejecuta una consulta SQL y retorna análisis estadístico usando pandas.
     
-    Esta herramienta permite realizar análisis estadísticos más complejos
-    usando pandas y numpy sobre los resultados de consultas SQL.
+    Esta herramienta permite al agente realizar análisis estadísticos detallados
+    sobre cualquier conjunto de datos obtenido mediante SQL.
     
     Args:
         query: Consulta SQL que retornará datos para analizar
         
     Returns:
-        Información estadística y descriptiva de los datos obtenidos.
+        Análisis estadístico completo incluyendo estadísticas descriptivas,
+        información sobre valores faltantes, distribuciones, etc.
     """
     try:
         # Ejecutar consulta y cargar en DataFrame
@@ -320,43 +326,78 @@ def analyze_data_pandas(query: str) -> str:
         if df.empty:
             return "No se encontraron datos para analizar."
         
-        analysis = f"ANÁLISIS DE DATOS - {len(df)} registros encontrados\n"
-        analysis += "=" * 50 + "\n\n"
+        analysis = f"📊 ANÁLISIS ESTADÍSTICO COMPLETO\n"
+        analysis += f"Consulta: {query[:100]}{'...' if len(query) > 100 else ''}\n"
+        analysis += "=" * 60 + "\n\n"
         
         # Información básica del DataFrame
-        analysis += f"Forma de los datos: {df.shape[0]} filas, {df.shape[1]} columnas\n"
-        analysis += f"Columnas: {list(df.columns)}\n\n"
+        analysis += f"📋 INFORMACIÓN GENERAL:\n"
+        analysis += f"  • Forma de los datos: {df.shape[0]:,} filas × {df.shape[1]} columnas\n"
+        analysis += f"  • Columnas: {list(df.columns)}\n"
+        analysis += f"  • Memoria utilizada: {df.memory_usage(deep=True).sum():,} bytes\n\n"
+        
+        # Tipos de datos
+        analysis += f"🏷️ TIPOS DE DATOS:\n"
+        for col, dtype in df.dtypes.items():
+            analysis += f"  • {col}: {dtype}\n"
+        analysis += "\n"
         
         # Estadísticas descriptivas para columnas numéricas
         numeric_cols = df.select_dtypes(include=[np.number]).columns
         if len(numeric_cols) > 0:
-            analysis += "ESTADÍSTICAS DESCRIPTIVAS (columnas numéricas):\n"
-            analysis += "-" * 45 + "\n"
+            analysis += "📈 ESTADÍSTICAS DESCRIPTIVAS (columnas numéricas):\n"
+            analysis += "-" * 50 + "\n"
             desc_stats = df[numeric_cols].describe()
             analysis += desc_stats.to_string() + "\n\n"
+            
+            # Información adicional sobre distribuciones
+            analysis += "📊 ANÁLISIS DE DISTRIBUCIÓN:\n"
+            for col in numeric_cols:
+                skewness = df[col].skew()
+                kurtosis = df[col].kurtosis()
+                analysis += f"  • {col}:\n"
+                analysis += f"    - Asimetría (skewness): {skewness:.3f}\n"
+                analysis += f"    - Curtosis (kurtosis): {kurtosis:.3f}\n"
         
         # Información sobre columnas categóricas
         categorical_cols = df.select_dtypes(include=['object']).columns
         if len(categorical_cols) > 0:
-            analysis += "INFORMACIÓN CATEGÓRICA:\n"
+            analysis += "\n🏷️ ANÁLISIS CATEGÓRICO:\n"
             analysis += "-" * 25 + "\n"
             for col in categorical_cols:
                 unique_count = df[col].nunique()
-                analysis += f"{col}: {unique_count} valores únicos\n"
-                if unique_count <= 10:  # Mostrar valores si son pocos
-                    values = df[col].unique()
-                    analysis += f"  Valores: {list(values)}\n"
+                analysis += f"  • {col}: {unique_count:,} valores únicos\n"
+                
+                # Mostrar frecuencias si son pocos valores únicos
+                if unique_count <= 20:
+                    value_counts = df[col].value_counts()
+                    analysis += f"    Distribución:\n"
+                    for value, count in value_counts.head(10).items():
+                        percentage = (count / len(df)) * 100
+                        analysis += f"      - {value}: {count:,} ({percentage:.1f}%)\n"
+                    if len(value_counts) > 10:
+                        analysis += f"      - ... y {len(value_counts) - 10} valores más\n"
             analysis += "\n"
         
         # Valores faltantes
         missing = df.isnull().sum()
         if missing.any():
-            analysis += "VALORES FALTANTES:\n"
+            analysis += "❌ VALORES FALTANTES:\n"
             analysis += "-" * 20 + "\n"
             for col, count in missing.items():
                 if count > 0:
-                    analysis += f"{col}: {count} ({count/len(df)*100:.1f}%)\n"
+                    percentage = (count / len(df)) * 100
+                    analysis += f"  • {col}: {count:,} valores faltantes ({percentage:.1f}%)\n"
             analysis += "\n"
+        else:
+            analysis += "✅ No hay valores faltantes en los datos.\n\n"
+        
+        # Correlaciones si hay múltiples columnas numéricas
+        if len(numeric_cols) > 1:
+            analysis += "🔗 MATRIZ DE CORRELACIÓN:\n"
+            analysis += "-" * 25 + "\n"
+            corr_matrix = df[numeric_cols].corr()
+            analysis += corr_matrix.to_string() + "\n\n"
         
         return analysis
         
@@ -401,298 +442,71 @@ def create_formatted_table(query: str, format_type: str = "markdown") -> str:
         return f"Error creando tabla formateada: {str(e)}"
 
 
-@tool
-def get_available_years() -> str:
+@tool 
+def create_formatted_markdown_table(data_query: str, table_title: str = "") -> str:
     """
-    Obtiene los años disponibles en la base de datos.
+    Crea una tabla Markdown correctamente formateada a partir de una consulta SQL.
     
-    Returns:
-        Lista de años con datos disponibles
-    """
-    query = """
-    SELECT DISTINCT año 
-    FROM datos_medicion 
-    ORDER BY año ASC
-    """
-    
-    try:
-        db_path = get_db_path()
-        with sqlite3.connect(db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute(query)
-            years = [row[0] for row in cursor.fetchall()]
-            
-        if years:
-            return f"Años disponibles: {', '.join(map(str, years))}\nTotal: {len(years)} años de datos"
-        else:
-            return "No se encontraron años con datos disponibles."
-            
-    except Exception as e:
-        return f"Error obteniendo años disponibles: {str(e)}"
-
-
-@tool
-def get_available_indicators() -> str:
-    """
-    Obtiene la lista completa de indicadores disponibles.
-    
-    Returns:
-        Lista detallada de indicadores con sus tipos
-    """
-    query = """
-    SELECT 
-        nombre_indicador,
-        tipo_dato,
-        tipo_de_medida,
-        COUNT(DISTINCT dm.año) as años_disponibles
-    FROM indicadores i
-    LEFT JOIN datos_medicion dm ON i.id_indicador = dm.id_indicador
-    GROUP BY i.id_indicador, nombre_indicador, tipo_dato, tipo_de_medida
-    ORDER BY nombre_indicador
-    """
-    
-    try:
-        db_path = get_db_path()
-        with sqlite3.connect(db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute(query)
-            results = cursor.fetchall()
-            
-        if results:
-            formatted = "INDICADORES DISPONIBLES:\n"
-            formatted += "=" * 50 + "\n\n"
-            
-            for nombre, tipo_dato, tipo_medida, años in results:
-                formatted += f"📊 {nombre}\n"
-                formatted += f"   Tipo: {tipo_dato}\n"
-                formatted += f"   Medida: {tipo_medida}\n"
-                formatted += f"   Años con datos: {años}\n\n"
-                
-            return formatted
-        else:
-            return "No se encontraron indicadores disponibles."
-            
-    except Exception as e:
-        return f"Error obteniendo indicadores: {str(e)}"
-
-
-@tool
-def get_entities_by_level(nivel: str = "Departamental") -> str:
-    """
-    Obtiene las entidades disponibles para un nivel geográfico específico.
+    IMPORTANTE: Esta función genera tablas con el formato Markdown correcto para 
+    que se rendericen apropiadamente en el frontend.
     
     Args:
-        nivel: Nivel geográfico (Nacional, Regional, Departamental, Municipal)
+        data_query: Consulta SQL que retornará los datos para la tabla
+        table_title: Título opcional para la tabla
         
     Returns:
-        Lista de entidades para el nivel especificado
+        Tabla en formato Markdown correctamente estructurada
+        
+    Formato correcto de tabla Markdown:
+    | Columna 1 | Columna 2 | Columna 3 |
+    |-----------|-----------|-----------|
+    | Dato 1    | Dato 2    | Dato 3    |
+    | Dato 4    | Dato 5    | Dato 6    |
     """
-    query = f"""
-    SELECT 
-        nombre,
-        codigo_dane,
-        COUNT(DISTINCT dm.año) as años_con_datos
-    FROM geografia g
-    LEFT JOIN datos_medicion dm ON g.id_geografia = dm.id_geografia
-    WHERE g.nivel = '{nivel}'
-    GROUP BY g.id_geografia, nombre, codigo_dane
-    ORDER BY nombre
-    """
-    
     try:
         db_path = get_db_path()
         with sqlite3.connect(db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute(query)
-            results = cursor.fetchall()
-            
-        if results:
-            formatted = f"ENTIDADES - NIVEL {nivel.upper()}:\n"
-            formatted += "=" * 40 + "\n\n"
-            
-            for nombre, codigo, años in results:
-                codigo_text = f" (DANE: {codigo})" if codigo else ""
-                años_text = f" - {años} años con datos" if años > 0 else " - Sin datos"
-                formatted += f"📍 {nombre}{codigo_text}{años_text}\n"
-                
-            formatted += f"\nTotal entidades: {len(results)}"
-            return formatted
-        else:
-            return f"No se encontraron entidades para el nivel {nivel}."
-            
-    except Exception as e:
-        return f"Error obteniendo entidades: {str(e)}"
-
-
-@tool
-def quick_summary(año: int = 2022) -> str:
-    """
-    Genera un resumen rápido de todos los indicadores para un año específico.
-    
-    Args:
-        año: Año para el resumen (por defecto 2022)
-        
-    Returns:
-        Resumen estadístico de todos los indicadores
-    """
-    try:
-        query = f"""
-        SELECT 
-            i.nombre_indicador,
-            g.nivel,
-            COUNT(*) as num_entidades,
-            ROUND(AVG(dm.valor) * 100, 2) as promedio_porcentaje,
-            ROUND(MIN(dm.valor) * 100, 2) as minimo_porcentaje,
-            ROUND(MAX(dm.valor) * 100, 2) as maximo_porcentaje
-        FROM datos_medicion dm
-        JOIN geografia g ON dm.id_geografia = g.id_geografia
-        JOIN indicadores i ON dm.id_indicador = i.id_indicador
-        WHERE dm.año = {año}
-        GROUP BY i.nombre_indicador, g.nivel
-        ORDER BY i.nombre_indicador, g.nivel
-        """
-        
-        db_path = get_db_path()
-        with sqlite3.connect(db_path) as conn:
-            df = pd.read_sql_query(query, conn)
+            df = pd.read_sql_query(data_query, conn)
         
         if df.empty:
-            return f"No se encontraron datos para el año {año}."
+            return "No se encontraron datos para crear la tabla."
         
-        summary = f"RESUMEN RÁPIDO - AÑO {año}\n"
-        summary += "=" * 40 + "\n\n"
+        # Crear encabezado de tabla
+        table_md = ""
+        if table_title:
+            table_md += f"\n### {table_title}\n\n"
         
-        for indicador in df['nombre_indicador'].unique():
-            summary += f"📊 {indicador}\n"
-            indicador_data = df[df['nombre_indicador'] == indicador]
+        # Crear encabezados
+        headers = "| " + " | ".join(df.columns) + " |"
+        table_md += headers + "\n"
+        
+        # Crear línea separadora
+        separator = "|" + "|".join(["-" * (len(col) + 2) for col in df.columns]) + "|"
+        table_md += separator + "\n"
+        
+        # Agregar filas de datos
+        for _, row in df.iterrows():
+            # Formatear valores (especialmente números)
+            formatted_values = []
+            for val in row:
+                if pd.isna(val):
+                    formatted_values.append("N/A")
+                elif isinstance(val, float):
+                    if val < 1.0:
+                        formatted_values.append(f"{val*100:.1f}%")  # Convertir a porcentaje
+                    else:
+                        formatted_values.append(f"{val:.2f}")
+                else:
+                    formatted_values.append(str(val))
             
-            for _, row in indicador_data.iterrows():
-                summary += f"   {row['nivel']}: {row['num_entidades']} entidades, "
-                summary += f"promedio {row['promedio_porcentaje']}%, "
-                summary += f"rango {row['minimo_porcentaje']}-{row['maximo_porcentaje']}%\n"
-            summary += "\n"
+            row_md = "| " + " | ".join(formatted_values) + " |"
+            table_md += row_md + "\n"
         
-        return summary
+        table_md += "\n"
+        return table_md
         
     except Exception as e:
-        return f"Error generando resumen: {str(e)}"
-
-
-@tool
-def get_top_entities(indicador: str, año: int, nivel: str = "Departamental", limit: int = 10) -> str:
-    """
-    Obtiene las entidades con mayor valor para un indicador específico.
-    
-    Args:
-        indicador: Nombre del indicador (ej: "Inseguridad Alimentaria Grave")
-        año: Año de consulta
-        nivel: Nivel geográfico (Nacional, Regional, Departamental, Municipal)
-        limit: Número máximo de resultados a retornar
-        
-    Returns:
-        Lista ordenada de entidades con los valores más altos.
-    """
-    query = f"""
-    SELECT 
-        g.nombre as entidad,
-        g.nivel,
-        i.nombre_indicador,
-        dm.año,
-        dm.valor,
-        ROUND(dm.valor * 100, 2) as porcentaje
-    FROM datos_medicion dm
-    JOIN geografia g ON dm.id_geografia = g.id_geografia
-    JOIN indicadores i ON dm.id_indicador = i.id_indicador
-    WHERE i.nombre_indicador LIKE '%{indicador}%'
-        AND dm.año = {año}
-        AND g.nivel = '{nivel}'
-    ORDER BY dm.valor DESC
-    LIMIT {limit}
-    """
-    
-    return sql_query(query)
-
-
-@tool
-def compare_years(indicador: str, entidad: str = "Colombia") -> str:
-    """
-    Compara la evolución de un indicador a lo largo de los años para una entidad.
-    
-    Args:
-        indicador: Nombre del indicador a analizar
-        entidad: Nombre de la entidad geográfica (por defecto "Colombia")
-        
-    Returns:
-        Evolución temporal del indicador para la entidad especificada.
-    """
-    query = f"""
-    SELECT 
-        g.nombre as entidad,
-        i.nombre_indicador,
-        dm.año,
-        dm.valor,
-        ROUND(dm.valor * 100, 2) as porcentaje
-    FROM datos_medicion dm
-    JOIN geografia g ON dm.id_geografia = g.id_geografia
-    JOIN indicadores i ON dm.id_indicador = i.id_indicador
-    WHERE i.nombre_indicador LIKE '%{indicador}%'
-        AND g.nombre LIKE '%{entidad}%'
-    ORDER BY dm.año ASC
-    """
-    
-    return sql_query(query)
-
-
-@tool
-def calculate_statistics(indicador: str, año: int, nivel: str = "Departamental") -> str:
-    """
-    Calcula estadísticas descriptivas para un indicador específico.
-    
-    Args:
-        indicador: Nombre del indicador
-        año: Año de análisis
-        nivel: Nivel geográfico
-        
-    Returns:
-        Estadísticas descriptivas (media, mediana, desviación estándar, etc.)
-    """
-    query = f"""
-    SELECT dm.valor
-    FROM datos_medicion dm
-    JOIN geografia g ON dm.id_geografia = g.id_geografia
-    JOIN indicadores i ON dm.id_indicador = i.id_indicador
-    WHERE i.nombre_indicador LIKE '%{indicador}%'
-        AND dm.año = {año}
-        AND g.nivel = '{nivel}'
-    """
-    
-    try:
-        db_path = get_db_path()
-        with sqlite3.connect(db_path) as conn:
-            df = pd.read_sql_query(query, conn)
-        
-        if df.empty:
-            return "No se encontraron datos para el análisis estadístico."
-        
-        values = df['valor']
-        
-        stats = f"ESTADÍSTICAS DESCRIPTIVAS\n"
-        stats += f"Indicador: {indicador}\n"
-        stats += f"Año: {año}, Nivel: {nivel}\n"
-        stats += "=" * 40 + "\n"
-        stats += f"Número de observaciones: {len(values)}\n"
-        stats += f"Media: {values.mean():.6f} ({values.mean()*100:.2f}%)\n"
-        stats += f"Mediana: {values.median():.6f} ({values.median()*100:.2f}%)\n"
-        stats += f"Desviación estándar: {values.std():.6f}\n"
-        stats += f"Mínimo: {values.min():.6f} ({values.min()*100:.2f}%)\n"
-        stats += f"Máximo: {values.max():.6f} ({values.max()*100:.2f}%)\n"
-        stats += f"Percentil 25: {values.quantile(0.25):.6f}\n"
-        stats += f"Percentil 75: {values.quantile(0.75):.6f}\n"
-        
-        return stats
-        
-    except Exception as e:
-        return f"Error calculando estadísticas: {str(e)}" 
+        return f"Error creando tabla Markdown: {str(e)}"
 
 
 @tool
@@ -965,155 +779,136 @@ def analyze_and_visualize(query: str, analysis_type: str = "complete") -> str:
         return result
         
     except Exception as e:
-        return f"Error en análisis y visualización: {str(e)}" 
+        return f"Error en análisis y visualización: {str(e)}"
 
 
 @tool
-def extract_analysis_keywords(analysis_text: str, max_keywords: int = 10) -> str:
+def format_web_citation(source_info: str, citation_style: str = "apa") -> str:
     """
-    Extrae palabras clave relevantes del análisis realizado.
+    Ayuda a formatear citas de fuentes web de manera consistente y profesional.
     
     Args:
-        analysis_text: Texto del análisis realizado
-        max_keywords: Número máximo de palabras clave a extraer
+        source_info: Información de la fuente en formato libre (ej: "título, autor, fecha, URL")
+        citation_style: Estilo de citación ("apa", "simple")
         
     Returns:
-        Lista de palabras clave separadas por comas
+        Cita formateada según el estilo especificado
+        
+    Examples:
+        format_web_citation("Políticas de seguridad alimentaria, MinSalud Colombia, 2024, https://minsalud.gov.co/politicas")
+        -> "MinSalud Colombia. (2024). *Políticas de seguridad alimentaria*. https://minsalud.gov.co/politicas"
     """
     try:
-        import re
-        from collections import Counter
-        
-        # Limpiar texto
-        text = analysis_text.lower()
-        
-        # Palabras clave específicas del dominio
-        domain_keywords = {
-            'inseguridad alimentaria', 'seguridad alimentaria', 'prevalencia',
-            'inseguridad grave', 'inseguridad moderada', 'hogares vulnerables',
-            'departamentos', 'municipios', 'regiones', 'colombia',
-            'antioquia', 'cundinamarca', 'atlántico', 'valle del cauca',
-            'cauca', 'nariño', 'chocó', 'córdoba', 'bolívar', 'magdalena',
-            'cesar', 'sucre', 'la guajira', 'santander', 'norte de santander',
-            'boyacá', 'tolima', 'huila', 'meta', 'casanare', 'arauca',
-            'vichada', 'guainía', 'vaupés', 'amazonas', 'guaviare',
-            'putumayo', 'caquetá', 'bogotá', 'medellín', 'cali', 'barranquilla',
-            'cartagena', 'bucaramanga', 'pereira', 'manizales', 'ibagué',
-            'neiva', 'villavicencio', 'montería', 'valledupar', 'sincelejo',
-            'riohacha', 'santa marta', 'quibdó', 'popayán', 'pasto',
-            'florencia', 'yopal', 'arauca ciudad', 'puerto carreño',
-            'inírida', 'mitú', 'leticia', 'san josé del guaviare', 'mocoa'
-        }
-        
-        # Términos de análisis estadístico
-        analysis_terms = {
-            'estadísticas descriptivas', 'promedio', 'media', 'mediana',
-            'máximo', 'mínimo', 'desviación estándar', 'percentil',
-            'distribución', 'correlación', 'tendencia', 'evolución',
-            'comparación', 'ranking', 'porcentaje', 'proporción',
-            'variabilidad', 'outliers', 'patrones', 'datos históricos'
-        }
-        
-        # Buscar palabras clave del dominio
-        found_keywords = []
-        for keyword in domain_keywords:
-            if keyword in text:
-                found_keywords.append(keyword.title())
-        
-        # Buscar términos de análisis
-        for term in analysis_terms:
-            if term in text:
-                found_keywords.append(f"📊 {term.title()}")
-        
-        # Buscar años mencionados
-        years = re.findall(r'\b(19|20)\d{2}\b', text)
-        for year in set(years):
-            found_keywords.append(f"📅 Año {year}")
-        
-        # Buscar porcentajes para identificar datos cuantitativos
-        percentages = re.findall(r'\b\d+\.?\d*\s*%', text)
-        if percentages:
-            found_keywords.append("📈 Datos Porcentuales")
-        
-        # Identificar si hay gráficas mencionadas
-        if any(word in text for word in ['gráfica', 'gráfico', 'visualización', 'chart', 'plot']):
-            found_keywords.append("📊 Visualizaciones")
-        
-        # Identificar si hay fuentes web
-        if any(word in text for word in ['según', 'fuente', 'http', 'www', 'referencias']):
-            found_keywords.append("🔗 Fuentes Externas")
-        
-        # Limitar cantidad y remover duplicados
-        unique_keywords = list(dict.fromkeys(found_keywords))[:max_keywords]
-        
-        return ", ".join(unique_keywords) if unique_keywords else "Análisis, Inseguridad Alimentaria, Colombia"
-        
-    except Exception as e:
-        return f"Error extrayendo palabras clave: {str(e)}"
-
-
-@tool 
-def create_formatted_markdown_table(data_query: str, table_title: str = "") -> str:
-    """
-    Crea una tabla Markdown correctamente formateada a partir de una consulta SQL.
-    
-    IMPORTANTE: Esta función genera tablas con el formato Markdown correcto para 
-    que se rendericen apropiadamente en el frontend.
-    
-    Args:
-        data_query: Consulta SQL que retornará los datos para la tabla
-        table_title: Título opcional para la tabla
-        
-    Returns:
-        Tabla en formato Markdown correctamente estructurada
-        
-    Formato correcto de tabla Markdown:
-    | Columna 1 | Columna 2 | Columna 3 |
-    |-----------|-----------|-----------|
-    | Dato 1    | Dato 2    | Dato 3    |
-    | Dato 4    | Dato 5    | Dato 6    |
-    """
-    try:
-        db_path = get_db_path()
-        with sqlite3.connect(db_path) as conn:
-            df = pd.read_sql_query(data_query, conn)
-        
-        if df.empty:
-            return "No se encontraron datos para crear la tabla."
-        
-        # Crear encabezado de tabla
-        table_md = ""
-        if table_title:
-            table_md += f"\n### {table_title}\n\n"
-        
-        # Crear encabezados
-        headers = "| " + " | ".join(df.columns) + " |"
-        table_md += headers + "\n"
-        
-        # Crear línea separadora
-        separator = "|" + "|".join(["-" * (len(col) + 2) for col in df.columns]) + "|"
-        table_md += separator + "\n"
-        
-        # Agregar filas de datos
-        for _, row in df.iterrows():
-            # Formatear valores (especialmente números)
-            formatted_values = []
-            for val in row:
-                if pd.isna(val):
-                    formatted_values.append("N/A")
-                elif isinstance(val, float):
-                    if val < 1.0:
-                        formatted_values.append(f"{val*100:.1f}%")  # Convertir a porcentaje
-                    else:
-                        formatted_values.append(f"{val:.2f}")
-                else:
-                    formatted_values.append(str(val))
+        if citation_style.lower() == "apa":
+            # Intentar extraer componentes de la información
+            parts = [part.strip() for part in source_info.split(',')]
             
-            row_md = "| " + " | ".join(formatted_values) + " |"
-            table_md += row_md + "\n"
+            # Extraer componentes disponibles
+            title = parts[0] if len(parts) > 0 and parts[0] else "Título no disponible"
+            author = parts[1] if len(parts) > 1 and parts[1] else "Autor no disponible"
+            date = parts[2] if len(parts) > 2 and parts[2] else "s.f."
+            url = parts[3] if len(parts) > 3 and parts[3] else ""
+            
+            # Si no hay comas, asumir que es solo una fuente simple
+            if len(parts) == 1:
+                # Solo un elemento, tratarlo como título/fuente
+                if 'http' in source_info:
+                    # Si contiene URL
+                    url_parts = source_info.split('http', 1)
+                    title = url_parts[0].strip()
+                    url = 'http' + url_parts[1].strip()
+                    author = "Fuente web"
+                else:
+                    # Solo título/autor
+                    title = source_info
+                    author = "Fuente no especificada"
+            
+            # Si el "autor" parece ser un año, intercambiar
+            elif len(parts) == 2:
+                if parts[1].strip().isdigit() and len(parts[1].strip()) == 4:
+                    # El segundo elemento es un año
+                    author = parts[0]
+                    date = parts[1]
+                    title = "Información no especificada"
+                else:
+                    # Orden normal: título, autor
+                    title = parts[0]
+                    author = parts[1]
+            
+            # Formatear fecha
+            if date.isdigit() and len(date) == 4:
+                date = f"({date})"
+            elif date == "s.f.":
+                date = "(s.f.)"
+            else:
+                date = f"({date})"
+            
+            # Formatear cita APA con lo que tengamos
+            citation = f"{author}. {date}. *{title}*."
+            if url:
+                citation += f" {url}"
+            
+            return citation
         
-        table_md += "\n"
-        return table_md
+        elif citation_style.lower() == "simple":
+            # Formato simple: solo fuente y URL
+            parts = source_info.split(',')
+            if len(parts) >= 2:
+                source_name = parts[0].strip()
+                url = parts[-1].strip() if 'http' in parts[-1] else ""
+                return f"Fuente: {source_name}. {url}" if url else f"Fuente: {source_name}"
+            else:
+                # Solo un elemento
+                if 'http' in source_info:
+                    url_parts = source_info.split('http', 1)
+                    source_name = url_parts[0].strip() or "Fuente web"
+                    url = 'http' + url_parts[1].strip()
+                    return f"Fuente: {source_name}. {url}"
+                else:
+                    return f"Fuente: {source_info}"
+        
+        else:
+            return f"Estilo de citación '{citation_style}' no soportado. Use 'apa' o 'simple'."
+            
+    except Exception as e:
+        return f"Fuente: {source_info}"
+
+
+@tool
+def create_sources_section(sources_list: str, include_title: bool = True) -> str:
+    """
+    Crea una sección de fuentes consultadas bien formateada.
+    
+    Args:
+        sources_list: Lista de fuentes separadas por punto y coma (;)
+                     Formato: "fuente1_info; fuente2_info; ..."
+        include_title: Si incluir el título "Fuentes Consultadas" o solo la lista
+        
+    Returns:
+        Sección de fuentes formateada en Markdown
+        
+    Example:
+        create_sources_section("Políticas alimentarias, MinSalud, 2024, url1; Estadísticas FAO, FAO Colombia, 2023, url2")
+    """
+    try:
+        sources = [source.strip() for source in sources_list.split(';') if source.strip()]
+        
+        if not sources:
+            return ""
+        
+        formatted_section = ""
+        
+        if include_title:
+            formatted_section = "\n## 📚 Fuentes Consultadas\n\n"
+        
+        for i, source in enumerate(sources, 1):
+            formatted_citation = format_web_citation(source, "apa")
+            formatted_section += f"{i}. {formatted_citation}\n"
+        
+        if include_title:
+            formatted_section += "\n---\n*Fuentes consultadas para complementar el análisis de datos locales*\n"
+        
+        return formatted_section
         
     except Exception as e:
-        return f"Error creando tabla Markdown: {str(e)}" 
+        return ""
