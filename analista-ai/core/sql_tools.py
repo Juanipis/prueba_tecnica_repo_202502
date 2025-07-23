@@ -22,18 +22,31 @@ import uuid
 # Ruta a la base de datos - se importará dinámicamente
 from .settings import get_settings
 
-# Storage temporal para imágenes (token-eficiente)
-_image_storage = {}
+# Import del session manager para manejo de imágenes por sesión
+from .session_manager import session_manager
+
+# Contexto global para el session_id actual (thread-safe)
+import threading
+_session_context = threading.local()
+
+def set_current_session_id(session_id: str):
+    """Establece el session_id actual para las herramientas."""
+    _session_context.current_session_id = session_id
+
+def get_current_session_id() -> str:
+    """Obtiene el session_id actual, por defecto "default"."""
+    return getattr(_session_context, 'current_session_id', 'default')
 
 def get_db_path() -> str:
     """Obtiene la ruta de la base de datos desde la configuración."""
     return str(get_settings().database.db_path)
 
-def _store_image(image_base64: str, title: str, chart_type: str) -> str:
+def _store_image(session_id: str, image_base64: str, title: str, chart_type: str) -> str:
     """
-    Almacena una imagen base64 temporalmente y retorna un ID.
+    Almacena una imagen base64 en la sesión específica y retorna un ID.
     
     Args:
+        session_id: ID de la sesión
         image_base64: String base64 de la imagen
         title: Título de la gráfica
         chart_type: Tipo de gráfica
@@ -41,22 +54,15 @@ def _store_image(image_base64: str, title: str, chart_type: str) -> str:
     Returns:
         ID único para referenciar la imagen
     """
-    image_id = str(uuid.uuid4())[:8]
-    _image_storage[image_id] = {
-        'data': image_base64,
-        'title': title,
-        'type': chart_type
-    }
-    return image_id
+    return session_manager.store_image(session_id, image_base64, title, chart_type)
 
-def get_stored_images() -> Dict[str, Dict[str, str]]:
-    """Obtiene todas las imágenes almacenadas temporalmente."""
-    return _image_storage.copy()
+def get_stored_images(session_id: str) -> Dict[str, Dict[str, str]]:
+    """Obtiene todas las imágenes almacenadas en una sesión específica."""
+    return session_manager.get_session_images(session_id)
 
-def clear_stored_images():
-    """Limpia el almacenamiento temporal de imágenes."""
-    global _image_storage
-    _image_storage.clear()
+def clear_stored_images(session_id: str):
+    """Limpia el almacenamiento temporal de imágenes de una sesión específica."""
+    session_manager.clear_session_images(session_id)
 
 
 @tool
@@ -517,7 +523,7 @@ def create_chart_visualization(query: str, chart_type: str = "bar", title: str =
     Crea una visualización usando matplotlib a partir de una consulta SQL.
     
     IMPORTANTE: Esta función es token-eficiente. No retorna la imagen base64 directamente
-    para evitar consumir tokens innecesariamente. La imagen se almacena temporalmente.
+    para evitar consumir tokens innecesariamente. La imagen se almacena en la sesión actual.
     
     Args:
         query: Consulta SQL que retornará los datos para visualizar
@@ -624,8 +630,9 @@ def create_chart_visualization(query: str, chart_type: str = "bar", title: str =
         # Limpiar memoria
         fig.clear()
         
-        # CLAVE: Almacenar imagen temporalmente, NO retornarla al agente
-        image_id = _store_image(f"data:image/png;base64,{img_base64}", title or f"Gráfica {chart_type}", chart_type)
+        # CLAVE: Almacenar imagen en la sesión actual, NO retornarla al agente
+        current_session_id = get_current_session_id()
+        image_id = _store_image(current_session_id, f"data:image/png;base64,{img_base64}", title or f"Gráfica {chart_type}", chart_type)
         
         # Retornar solo mensaje corto (token-eficiente)
         return f"✅ Gráfica {chart_type} creada exitosamente: '{title}' (ID: {image_id})"
@@ -697,7 +704,7 @@ def analyze_and_visualize(query: str, analysis_type: str = "complete") -> str:
     """
     Realiza análisis completo con estadísticas y visualizaciones automáticas.
     
-    IMPORTANTE: Token-eficiente - almacena imágenes temporalmente.
+    IMPORTANTE: Token-eficiente - almacena imágenes en la sesión actual.
     
     Args:
         query: Consulta SQL para analizar

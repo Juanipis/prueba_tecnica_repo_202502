@@ -22,6 +22,7 @@ import uvicorn
 
 from core.smolagent import food_security_agent
 from core.settings import get_settings, print_settings_summary
+from core.session_manager import session_manager
 
 # Obtener configuración
 settings = get_settings()
@@ -100,12 +101,72 @@ class AnalysisResponse(BaseModel):
         }
 
 
+class ConversationRequest(BaseModel):
+    question: str
+    session_id: Optional[str] = None
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "question": "¿Y qué pasa con Antioquia específicamente?",
+                "session_id": "abc123-def456-ghi789"
+            }
+        }
+
+
+class ConversationResponse(BaseModel):
+    question: str
+    analysis: str
+    session_id: str
+    message_id: str
+    agent_used: str
+    success: bool
+    conversation_summary: Dict[str, Any]
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "question": "¿Y qué pasa con Antioquia específicamente?",
+                "analysis": "# Análisis de Antioquia...",
+                "session_id": "abc123-def456-ghi789",
+                "message_id": "msg_001",
+                "agent_used": "SmolAgent with Context",
+                "success": True,
+                "conversation_summary": {
+                    "message_count": 4,
+                    "session_created": "2024-01-01T10:00:00",
+                    "last_activity": "2024-01-01T10:05:00"
+                }
+            }
+        }
+
+
+class SessionResponse(BaseModel):
+    session_id: str
+    created_at: str
+    message: str
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "session_id": "abc123-def456-ghi789",
+                "created_at": "2024-01-01T10:00:00.000Z",
+                "message": "Nueva sesión de conversación creada"
+            }
+        }
+
+
 # ===== ENDPOINTS PRINCIPALES =====
 
 @app.get("/", response_class=FileResponse)
 async def home():
     """Servir el frontend principal."""
     return FileResponse(f'{settings.server.static_directory}/index.html')
+
+@app.get("/chat", response_class=FileResponse)
+async def chat():
+    """Servir la interfaz de chat."""
+    return FileResponse(f'{settings.server.static_directory}/chat.html')
 
 @app.get("/api-info", response_class=HTMLResponse)
 async def api_info():
@@ -282,16 +343,23 @@ async def analyze_question(request: QuestionRequest):
             detail="Agente SmolAgents no disponible. Verifica la configuración."
         )
     
+    # Crear sesión temporal para análisis único (sin contexto)
+    temp_session_id = session_manager.create_session()
+    
     try:
+        
         # Limpiar almacenamiento de imágenes previo
-        from core.sql_tools import clear_stored_images, get_stored_images
-        clear_stored_images()
+        from core.sql_tools import clear_stored_images, get_stored_images, set_current_session_id
+        clear_stored_images(temp_session_id)
+        
+        # Establecer el contexto para las herramientas de visualización
+        set_current_session_id(temp_session_id)
         
         # Ejecutar análisis con el agente
-        analysis = food_security_agent.analyze_question(request.question)
+        analysis = food_security_agent.analyze_question(request.question, temp_session_id)
         
         # Obtener imágenes generadas durante el análisis
-        stored_images = get_stored_images()
+        stored_images = get_stored_images(temp_session_id)
         
         # Si hay imágenes, inyectarlas en el markdown
         if stored_images:
@@ -312,8 +380,9 @@ async def analyze_question(request: QuestionRequest):
                 analysis += f"\n### {title}\n"
                 analysis += f"![{title}]({image_data})\n\n"
         
-        # Limpiar almacenamiento temporal
-        clear_stored_images()
+        # Limpiar almacenamiento temporal y eliminar sesión temporal
+        clear_stored_images(temp_session_id)
+        session_manager.delete_session(temp_session_id)
         
         web_search_indicator = " + Web Search" if (
             food_security_agent and 
@@ -331,7 +400,8 @@ async def analyze_question(request: QuestionRequest):
     except Exception as e:
         # Limpiar almacenamiento en caso de error
         from core.sql_tools import clear_stored_images
-        clear_stored_images()
+        clear_stored_images(temp_session_id)
+        session_manager.delete_session(temp_session_id)
         
         # En caso de error, aún intentar devolver información útil
         error_analysis = food_security_agent._generate_error_response(str(e), request.question) if food_security_agent else f"Error: {str(e)}"
@@ -342,6 +412,175 @@ async def analyze_question(request: QuestionRequest):
             agent_used="SmolAgent (Error Mode)",
             success=False
         )
+
+
+@app.post("/chat", response_model=ConversationResponse)
+async def chat_conversation(request: ConversationRequest):
+    """
+    Endpoint para conversaciones con contexto. Mantiene el historial de la conversación
+    y permite hacer preguntas de seguimiento.
+    """
+    if not food_security_agent:
+        raise HTTPException(
+            status_code=503,
+            detail="Agente SmolAgents no disponible. Verifica la configuración."
+        )
+    
+    try:
+        # Crear nueva sesión si no se proporciona
+        if not request.session_id:
+            session_id = session_manager.create_session()
+        else:
+            session_id = request.session_id
+            # Verificar que la sesión existe
+            if not session_manager.get_session(session_id):
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Sesión {session_id} no encontrada o expirada"
+                )
+        
+        # Agregar pregunta del usuario a la conversación
+        user_message = session_manager.add_message(session_id, "user", request.question)
+        
+        # Limpiar imágenes previas de la sesión
+        from core.sql_tools import clear_stored_images, get_stored_images, set_current_session_id
+        clear_stored_images(session_id)
+        
+        # Establecer el contexto para las herramientas de visualización
+        set_current_session_id(session_id)
+        
+        # Ejecutar análisis con contexto de conversación
+        analysis = food_security_agent.analyze_question(request.question, session_id)
+        
+        # Obtener imágenes generadas durante el análisis
+        stored_images = get_stored_images(session_id)
+        
+        # Preparar lista de imágenes para el mensaje del asistente
+        message_images = []
+        if stored_images:
+            print(f"🖼️ Inyectando {len(stored_images)} imágenes en la respuesta")
+            # Crear sección de visualizaciones si no existe
+            if "## 📈 Visualizaciones" not in analysis and "📈 Visualizaciones Generadas" not in analysis:
+                analysis += "\n\n## 📈 Visualizaciones Generadas\n\n"
+            
+            # Inyectar cada imagen en el markdown y guardar referencia
+            for image_id, image_info in stored_images.items():
+                title = image_info['title']
+                image_data = image_info['data']
+                chart_type = image_info['type']
+                
+                print(f"  📊 {title} ({chart_type}) - {len(image_data)} caracteres")
+                
+                # Agregar imagen al markdown
+                analysis += f"\n### {title}\n"
+                analysis += f"![{title}]({image_data})\n\n"
+                
+                # Guardar referencia de imagen para el mensaje
+                message_images.append({
+                    'id': image_id,
+                    'title': title,
+                    'type': chart_type
+                })
+        
+        # Agregar respuesta del asistente a la conversación
+        assistant_message = session_manager.add_message(session_id, "assistant", analysis, message_images)
+        
+        # Obtener resumen de la conversación
+        conversation_summary = session_manager.get_session_summary(session_id)
+        
+        web_search_indicator = " + Web Search" if (
+            food_security_agent and 
+            hasattr(food_security_agent, 'web_search_tool') and 
+            food_security_agent.web_search_tool
+        ) else ""
+        
+        return ConversationResponse(
+            question=request.question,
+            analysis=analysis,
+            session_id=session_id,
+            message_id=assistant_message.id,
+            agent_used=f"SmolAgent with Context{web_search_indicator}",
+            success=True,
+            conversation_summary=conversation_summary
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        # En caso de error, aún intentar devolver información útil
+        error_analysis = food_security_agent._generate_error_response(str(e), request.question) if food_security_agent else f"Error: {str(e)}"
+        
+        # Si había un session_id válido, agregar el error como mensaje del asistente
+        if request.session_id and session_manager.get_session(request.session_id):
+            session_manager.add_message(request.session_id, "assistant", error_analysis)
+            conversation_summary = session_manager.get_session_summary(request.session_id)
+        else:
+            conversation_summary = {}
+        
+        return ConversationResponse(
+            question=request.question,
+            analysis=error_analysis,
+            session_id=request.session_id or "error",
+            message_id="error",
+            agent_used="SmolAgent (Error Mode)",
+            success=False,
+            conversation_summary=conversation_summary
+        )
+
+
+@app.post("/session/new", response_model=SessionResponse)
+async def create_new_session():
+    """
+    Crea una nueva sesión de conversación.
+    """
+    try:
+        session_id = session_manager.create_session()
+        conversation = session_manager.get_session(session_id)
+        
+        return SessionResponse(
+            session_id=session_id,
+            created_at=conversation.created_at.isoformat(),
+            message="Nueva sesión de conversación creada exitosamente"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error creando sesión: {str(e)}"
+        )
+
+
+@app.get("/session/{session_id}")
+async def get_session_info(session_id: str):
+    """
+    Obtiene información de una sesión específica.
+    """
+    conversation = session_manager.get_session(session_id)
+    if not conversation:
+        raise HTTPException(
+            status_code=404,
+            detail="Sesión no encontrada o expirada"
+        )
+    
+    return {
+        "session_info": session_manager.get_session_summary(session_id),
+        "conversation": conversation.to_dict()
+    }
+
+
+@app.delete("/session/{session_id}")
+async def delete_session(session_id: str):
+    """
+    Elimina una sesión específica.
+    """
+    conversation = session_manager.get_session(session_id)
+    if not conversation:
+        raise HTTPException(
+            status_code=404,
+            detail="Sesión no encontrada"
+        )
+    
+    session_manager.delete_session(session_id)
+    return {"message": f"Sesión {session_id} eliminada exitosamente"}
 
 
 # ===== ENDPOINTS DE INFORMACIÓN =====
@@ -489,7 +728,17 @@ async def get_examples():
     return {
         "message": "Ejemplos de preguntas para el agente SmolAgents",
         "categories": examples,
-        "tip": "El agente puede combinar múltiples tipos de análisis en una sola consulta"
+        "tip": "El agente puede combinar múltiples tipos de análisis en una sola consulta",
+        "chat_info": {
+            "description": "Usa /chat para conversaciones con contexto y seguimiento",
+            "url": "/chat",
+            "features": [
+                "Mantiene contexto de conversaciones previas",
+                "Preguntas de seguimiento inteligentes", 
+                "Sesiones de usuario independientes",
+                "Interfaz de chat en tiempo real"
+            ]
+        }
     }
 
 

@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat AI - Analista de Inseguridad Alimentaria</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        color: #333;
+      }
+
+      .header {
+        background: rgba(255, 255, 255, 0.95);
+        padding: 15px 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(10px);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-shrink: 0;
+      }
+
+      .header h1 {
+        color: #667eea;
+        font-size: 1.5rem;
+        margin: 0;
+      }
+
+      .header-info {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        font-size: 0.9rem;
+      }
+
+      .session-info {
+        background: #f8f9fa;
+        padding: 8px 15px;
+        border-radius: 20px;
+        border: 1px solid #e1e5e9;
+      }
+
+      .new-session-btn {
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+      }
+
+      .new-session-btn:hover {
+        background: #5a6fd8;
+        transform: translateY(-1px);
+      }
+
+      .chat-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        max-width: 1000px;
+        margin: 0 auto;
+        width: 100%;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        overflow: hidden;
+      }
+
+      .messages-area {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .message {
+        display: flex;
+        gap: 12px;
+        max-width: 85%;
+        animation: slideIn 0.3s ease-out;
+      }
+
+      .message.user {
+        align-self: flex-end;
+        flex-direction: row-reverse;
+      }
+
+      .message.assistant {
+        align-self: flex-start;
+      }
+
+      .message-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+      }
+
+      .message.user .message-avatar {
+        background: #667eea;
+        color: white;
+      }
+
+      .message.assistant .message-avatar {
+        background: #28a745;
+        color: white;
+      }
+
+      .message-content {
+        background: white;
+        padding: 15px 20px;
+        border-radius: 18px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e1e5e9;
+        position: relative;
+      }
+
+      .message.user .message-content {
+        background: #667eea;
+        color: white;
+      }
+
+      .message.assistant .message-content {
+        background: #f8f9fa;
+        color: #333;
+      }
+
+      .message-content h1,
+      .message-content h2,
+      .message-content h3 {
+        margin: 15px 0 10px 0;
+        color: inherit;
+      }
+
+      .message-content h1 {
+        font-size: 1.3rem;
+      }
+      .message-content h2 {
+        font-size: 1.1rem;
+      }
+      .message-content h3 {
+        font-size: 1rem;
+      }
+
+      .message-content table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 15px 0;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .message-content th,
+      .message-content td {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 1px solid #e1e5e9;
+      }
+
+      .message-content th {
+        background: #667eea;
+        color: white;
+        font-weight: 600;
+      }
+
+      .message-content tr:hover {
+        background: #f8f9ff;
+      }
+
+      .message-content img {
+        max-width: 100%;
+        height: auto;
+        margin: 15px 0;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        cursor: pointer;
+        transition: transform 0.3s ease;
+      }
+
+      .message-content img:hover {
+        transform: scale(1.02);
+      }
+
+      .message-content code {
+        background: rgba(0, 0, 0, 0.1);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: "Courier New", monospace;
+      }
+
+      .message-content pre {
+        background: rgba(0, 0, 0, 0.05);
+        padding: 15px;
+        border-radius: 8px;
+        overflow-x: auto;
+        margin: 15px 0;
+      }
+
+      .message-meta {
+        font-size: 0.75rem;
+        color: #666;
+        margin-top: 8px;
+        text-align: right;
+      }
+
+      .message.user .message-meta {
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      .input-area {
+        padding: 20px;
+        background: white;
+        border-top: 1px solid #e1e5e9;
+        flex-shrink: 0;
+      }
+
+      .input-container {
+        display: flex;
+        gap: 15px;
+        align-items: flex-end;
+        max-width: 100%;
+      }
+
+      .input-field {
+        flex: 1;
+        min-height: 45px;
+        max-height: 120px;
+        padding: 12px 18px;
+        border: 2px solid #e1e5e9;
+        border-radius: 25px;
+        resize: none;
+        font-family: inherit;
+        font-size: 16px;
+        outline: none;
+        transition: all 0.3s ease;
+        overflow-y: auto;
+      }
+
+      .input-field:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      }
+
+      .send-button {
+        width: 45px;
+        height: 45px;
+        border: none;
+        border-radius: 50%;
+        background: #667eea;
+        color: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        transition: all 0.3s ease;
+        flex-shrink: 0;
+      }
+
+      .send-button:hover:not(:disabled) {
+        background: #5a6fd8;
+        transform: scale(1.05);
+      }
+
+      .send-button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .typing-indicator {
+        display: none;
+        align-items: center;
+        gap: 12px;
+        max-width: 85%;
+        animation: slideIn 0.3s ease-out;
+      }
+
+      .typing-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #28a745;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+      }
+
+      .typing-content {
+        background: #f8f9fa;
+        padding: 15px 20px;
+        border-radius: 18px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e1e5e9;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .typing-dots {
+        display: flex;
+        gap: 4px;
+      }
+
+      .typing-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #667eea;
+        animation: typing 1.4s infinite;
+      }
+
+      .typing-dot:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+
+      .typing-dot:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+
+      .welcome-message {
+        text-align: center;
+        padding: 40px 20px;
+        color: #666;
+      }
+
+      .welcome-message h2 {
+        color: #667eea;
+        margin-bottom: 15px;
+      }
+
+      .quick-questions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 15px;
+        margin-top: 25px;
+      }
+
+      .quick-question {
+        background: white;
+        padding: 15px;
+        border-radius: 12px;
+        border: 1px solid #e1e5e9;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: left;
+      }
+
+      .quick-question:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        border-color: #667eea;
+      }
+
+      .quick-question h4 {
+        color: #667eea;
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        font-weight: 600;
+      }
+
+      .quick-question p {
+        color: #555;
+        font-size: 0.95rem;
+        line-height: 1.4;
+        margin: 0;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes typing {
+        0%,
+        60%,
+        100% {
+          transform: scale(1);
+          opacity: 0.5;
+        }
+        30% {
+          transform: scale(1.2);
+          opacity: 1;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .header {
+          flex-direction: column;
+          gap: 10px;
+          align-items: stretch;
+        }
+
+        .header-info {
+          justify-content: space-between;
+        }
+
+        .chat-container {
+          margin: 10px;
+          height: calc(100vh - 100px);
+        }
+
+        .message {
+          max-width: 95%;
+        }
+
+        .quick-questions {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* Scroll personalizado */
+      .messages-area::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      .messages-area::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+      }
+
+      .messages-area::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 4px;
+      }
+
+      .messages-area::-webkit-scrollbar-thumb:hover {
+        background: #999;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Header -->
+    <div class="header">
+      <div>
+        <h1>🤖 Chat AI - Analista Alimentario</h1>
+      </div>
+      <div class="header-info">
+        <div class="session-info" id="sessionInfo">📝 Sin sesión activa</div>
+        <button class="new-session-btn" onclick="startNewSession()">
+          ➕ Nueva Sesión
+        </button>
+        <a href="/" style="color: #667eea; text-decoration: none">
+          🏠 Inicio
+        </a>
+      </div>
+    </div>
+
+    <!-- Chat Container -->
+    <div class="chat-container">
+      <!-- Messages Area -->
+      <div class="messages-area" id="messagesArea">
+        <!-- Welcome Message -->
+        <div class="welcome-message" id="welcomeMessage">
+          <h2>¡Bienvenido al Chat AI!</h2>
+          <p>
+            Soy tu asistente inteligente para análisis de inseguridad
+            alimentaria en Colombia.
+          </p>
+          <p>
+            Puedo ayudarte con análisis, estadísticas, visualizaciones y
+            preguntas de seguimiento. ¡Comienza una conversación!
+          </p>
+
+          <div class="quick-questions">
+            <div
+              class="quick-question"
+              onclick="sendQuickQuestion('¿Cuál es la situación de inseguridad alimentaria en Colombia?')"
+            >
+              <h4>📊 Situación General</h4>
+              <p>
+                ¿Cuál es la situación de inseguridad alimentaria en Colombia?
+              </p>
+            </div>
+            <div
+              class="quick-question"
+              onclick="sendQuickQuestion('¿Qué departamentos tienen mayor inseguridad alimentaria grave en 2022?')"
+            >
+              <h4>🏆 Rankings</h4>
+              <p>
+                ¿Qué departamentos tienen mayor inseguridad alimentaria grave?
+              </p>
+            </div>
+            <div
+              class="quick-question"
+              onclick="sendQuickQuestion('Crea una gráfica de barras que muestre los 10 departamentos con mayor inseguridad alimentaria')"
+            >
+              <h4>📊 Visualizaciones</h4>
+              <p>Crea gráficas de los departamentos más afectados</p>
+            </div>
+            <div
+              class="quick-question"
+              onclick="sendQuickQuestion('¿Cuáles son las estadísticas descriptivas de inseguridad moderada en 2023?')"
+            >
+              <h4>📐 Estadísticas</h4>
+              <p>Estadísticas descriptivas de inseguridad moderada</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Typing Indicator -->
+        <div class="typing-indicator" id="typingIndicator">
+          <div class="typing-avatar">🤖</div>
+          <div class="typing-content">
+            <span>El asistente está escribiendo</span>
+            <div class="typing-dots">
+              <div class="typing-dot"></div>
+              <div class="typing-dot"></div>
+              <div class="typing-dot"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input Area -->
+      <div class="input-area">
+        <div class="input-container">
+          <textarea
+            id="messageInput"
+            class="input-field"
+            placeholder="Escribe tu pregunta sobre inseguridad alimentaria..."
+            rows="1"
+          ></textarea>
+          <button class="send-button" id="sendButton" onclick="sendMessage()">
+            ➤
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Variables globales
+      let currentSessionId = null;
+      let isProcessing = false;
+      let messageCount = 0;
+
+      // Inicializar la aplicación
+      document.addEventListener("DOMContentLoaded", function () {
+        setupEventListeners();
+        updateSessionInfo();
+      });
+
+      function setupEventListeners() {
+        const messageInput = document.getElementById("messageInput");
+        const sendButton = document.getElementById("sendButton");
+
+        // Auto-resize textarea
+        messageInput.addEventListener("input", function () {
+          this.style.height = "auto";
+          this.style.height = Math.min(this.scrollHeight, 120) + "px";
+        });
+
+        // Send on Enter (but not Shift+Enter)
+        messageInput.addEventListener("keypress", function (e) {
+          if (e.key === "Enter" && !e.shiftKey && !isProcessing) {
+            e.preventDefault();
+            sendMessage();
+          }
+        });
+      }
+
+      async function startNewSession() {
+        try {
+          const response = await fetch("/session/new", {
+            method: "POST",
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            currentSessionId = data.session_id;
+            updateSessionInfo();
+            clearMessages();
+            showMessage(
+              "assistant",
+              "¡Hola! He iniciado una nueva sesión de conversación. ¿En qué puedo ayudarte con el análisis de inseguridad alimentaria?",
+              true
+            );
+          } else {
+            console.error("Error creando sesión");
+          }
+        } catch (error) {
+          console.error("Error:", error);
+        }
+      }
+
+      function updateSessionInfo() {
+        const sessionInfo = document.getElementById("sessionInfo");
+        if (currentSessionId) {
+          const shortId = currentSessionId.split("-")[0];
+          sessionInfo.textContent = `📝 Sesión: ${shortId}`;
+        } else {
+          sessionInfo.textContent = "📝 Sin sesión activa";
+        }
+      }
+
+      function clearMessages() {
+        const messagesArea = document.getElementById("messagesArea");
+        const welcomeMessage = document.getElementById("welcomeMessage");
+        const typingIndicator = document.getElementById("typingIndicator");
+
+        // Eliminar todos los mensajes excepto welcome y typing indicator
+        const messages = messagesArea.querySelectorAll(".message");
+        messages.forEach((msg) => msg.remove());
+
+        // Ocultar welcome message
+        welcomeMessage.style.display = "none";
+        messageCount = 0;
+      }
+
+      function sendQuickQuestion(question) {
+        const messageInput = document.getElementById("messageInput");
+        messageInput.value = question;
+        sendMessage();
+      }
+
+      async function sendMessage() {
+        const messageInput = document.getElementById("messageInput");
+        const message = messageInput.value.trim();
+
+        if (!message || isProcessing) return;
+
+        // Si no hay sesión activa, crear una nueva
+        if (!currentSessionId) {
+          await startNewSession();
+        }
+
+        // Limpiar input y deshabilitar
+        messageInput.value = "";
+        messageInput.style.height = "auto";
+        setProcessingState(true);
+
+        // Ocultar mensaje de bienvenida si es el primer mensaje
+        if (messageCount === 0) {
+          document.getElementById("welcomeMessage").style.display = "none";
+        }
+
+        // Mostrar mensaje del usuario
+        showMessage("user", message);
+
+        // Mostrar indicador de escritura
+        showTypingIndicator();
+
+        try {
+          const response = await fetch("/chat", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              question: message,
+              session_id: currentSessionId,
+            }),
+          });
+
+          const data = await response.json();
+
+          // Ocultar indicador de escritura
+          hideTypingIndicator();
+
+          if (response.ok) {
+            // Actualizar session_id si es nuevo
+            if (data.session_id && data.session_id !== currentSessionId) {
+              currentSessionId = data.session_id;
+              updateSessionInfo();
+            }
+
+            // Mostrar respuesta del asistente
+            showMessage("assistant", data.analysis);
+          } else {
+            throw new Error(data.detail || "Error en el análisis");
+          }
+        } catch (error) {
+          hideTypingIndicator();
+          showMessage(
+            "assistant",
+            `❌ Error: ${error.message}. Por favor, intenta nuevamente.`,
+            true
+          );
+          console.error("Error:", error);
+        } finally {
+          setProcessingState(false);
+        }
+      }
+
+      function showMessage(role, content, isError = false) {
+        const messagesArea = document.getElementById("messagesArea");
+
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `message ${role}`;
+
+        const avatarDiv = document.createElement("div");
+        avatarDiv.className = "message-avatar";
+        avatarDiv.textContent = role === "user" ? "👤" : "🤖";
+
+        const contentDiv = document.createElement("div");
+        contentDiv.className = "message-content";
+
+        if (isError) {
+          contentDiv.style.background = "#f8d7da";
+          contentDiv.style.color = "#721c24";
+          contentDiv.style.border = "1px solid #f5c6cb";
+        }
+
+        // Convertir Markdown a HTML
+        contentDiv.innerHTML = markdownToHtml(content);
+
+        const metaDiv = document.createElement("div");
+        metaDiv.className = "message-meta";
+        metaDiv.textContent = new Date().toLocaleTimeString();
+
+        contentDiv.appendChild(metaDiv);
+
+        messageDiv.appendChild(avatarDiv);
+        messageDiv.appendChild(contentDiv);
+
+        // Insertar antes del typing indicator
+        const typingIndicator = document.getElementById("typingIndicator");
+        messagesArea.insertBefore(messageDiv, typingIndicator);
+
+        messageCount++;
+        scrollToBottom();
+      }
+
+      function showTypingIndicator() {
+        const typingIndicator = document.getElementById("typingIndicator");
+        typingIndicator.style.display = "flex";
+        scrollToBottom();
+      }
+
+      function hideTypingIndicator() {
+        const typingIndicator = document.getElementById("typingIndicator");
+        typingIndicator.style.display = "none";
+      }
+
+      function setProcessingState(processing) {
+        isProcessing = processing;
+        const sendButton = document.getElementById("sendButton");
+        const messageInput = document.getElementById("messageInput");
+
+        sendButton.disabled = processing;
+        messageInput.disabled = processing;
+
+        if (processing) {
+          sendButton.style.background = "#ccc";
+        } else {
+          sendButton.style.background = "#667eea";
+          messageInput.focus();
+        }
+      }
+
+      function scrollToBottom() {
+        const messagesArea = document.getElementById("messagesArea");
+        setTimeout(() => {
+          messagesArea.scrollTop = messagesArea.scrollHeight;
+        }, 100);
+      }
+
+      // Convertir Markdown básico a HTML (reutilizando lógica del index.html)
+      function markdownToHtml(markdown) {
+        let processedMarkdown = markdown;
+        const protectedElements = [];
+
+        // 1. Proteger bloques de código
+        processedMarkdown = processedMarkdown.replace(
+          /```([\s\S]*?)```/g,
+          function (match, content) {
+            const index = protectedElements.length;
+            protectedElements.push(`<pre><code>${content}</code></pre>`);
+            return `__PROTECTED_${index}__`;
+          }
+        );
+
+        // 2. Proteger imágenes (incluyendo base64)
+        processedMarkdown = processedMarkdown.replace(
+          /!\[([^\]]*)\]\(([^)]+)\)/g,
+          function (match, alt, src) {
+            const index = protectedElements.length;
+            if (src.startsWith("data:image/")) {
+              protectedElements.push(
+                `<img src="${src}" alt="${alt}" style="max-width: 100%; border-radius: 8px; margin: 10px 0;" />`
+              );
+            } else {
+              protectedElements.push(`<img src="${src}" alt="${alt}" />`);
+            }
+            return `__PROTECTED_${index}__`;
+          }
+        );
+
+        // 3. Procesar headers
+        processedMarkdown = processedMarkdown
+          .replace(/^### (.*$)/gm, "<h3>$1</h3>")
+          .replace(/^## (.*$)/gm, "<h2>$1</h2>")
+          .replace(/^# (.*$)/gm, "<h1>$1</h1>");
+
+        // 4. Procesar texto en negrita
+        processedMarkdown = processedMarkdown.replace(
+          /\*\*(.*?)\*\*/g,
+          "<strong>$1</strong>"
+        );
+
+        // 5. Procesar código inline
+        processedMarkdown = processedMarkdown.replace(
+          /`([^`]+)`/g,
+          "<code>$1</code>"
+        );
+
+        // 6. Procesar párrafos
+        processedMarkdown = processedMarkdown
+          .split("\n\n")
+          .map((paragraph) => {
+            paragraph = paragraph.trim();
+            if (!paragraph) return "";
+
+            if (
+              paragraph.match(/^<h[1-6]>/) ||
+              paragraph.match(/^<pre>/) ||
+              paragraph.match(/^<div/) ||
+              paragraph.match(/^__PROTECTED_\d+__$/)
+            ) {
+              return paragraph;
+            }
+
+            return `<p>${paragraph.replace(/\n/g, "<br>")}</p>`;
+          })
+          .join("\n");
+
+        // 7. Restaurar elementos protegidos
+        protectedElements.forEach((element, index) => {
+          processedMarkdown = processedMarkdown.replace(
+            `__PROTECTED_${index}__`,
+            element
+          );
+        });
+
+        // 8. Procesar tablas Markdown
+        processedMarkdown = processedMarkdown.replace(
+          /(\|[^|\n]*\|[\s\S]*?\n(?:\|[^|\n]*\|.*\n?)*)/g,
+          function (match) {
+            const lines = match.trim().split("\n");
+            let tableHtml = "<table>\n";
+
+            for (let i = 0; i < lines.length; i++) {
+              const line = lines[i].trim();
+
+              if (line.match(/^\|[\s\-|:]+\|$/)) {
+                continue;
+              }
+
+              if (line.startsWith("|") && line.endsWith("|")) {
+                const cells = line
+                  .slice(1, -1)
+                  .split("|")
+                  .map((cell) => cell.trim());
+
+                if (i === 0) {
+                  tableHtml += "  <thead>\n    <tr>\n";
+                  cells.forEach((cell) => {
+                    tableHtml += `      <th>${cell}</th>\n`;
+                  });
+                  tableHtml += "    </tr>\n  </thead>\n  <tbody>\n";
+                } else {
+                  tableHtml += "    <tr>\n";
+                  cells.forEach((cell) => {
+                    tableHtml += `      <td>${cell}</td>\n`;
+                  });
+                  tableHtml += "    </tr>\n";
+                }
+              }
+            }
+
+            tableHtml += "  </tbody>\n</table>";
+            return tableHtml;
+          }
+        );
+
+        return processedMarkdown;
+      }
+    </script>
+  </body>
+</html>

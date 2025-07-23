@@ -115,7 +115,7 @@ class InseguridadAlimentariaAgent:
         
         print(f"🤖 Agente inicializado con {len(tools)} herramientas esenciales")
     
-    def analyze_question(self, question: str) -> str:
+    def analyze_question(self, question: str, session_id: str = None) -> str:
         """
         Analiza una pregunta en lenguaje natural sobre inseguridad alimentaria.
         
@@ -136,8 +136,13 @@ class InseguridadAlimentariaAgent:
             Análisis completo en formato Markdown
         """
         try:
+            # Establecer el contexto del session_id para las herramientas
+            from .sql_tools import set_current_session_id
+            if session_id:
+                set_current_session_id(session_id)
+            
             # Preparar el prompt con contexto específico
-            enhanced_question = self._enhance_question_with_context(question)
+            enhanced_question = self._enhance_question_with_context(question, session_id)
             
             # Ejecutar el agente
             result = self.agent.run(enhanced_question)
@@ -150,10 +155,12 @@ class InseguridadAlimentariaAgent:
             
             return self._generate_error_response(error_message, question)
     
-    def _enhance_question_with_context(self, question: str) -> str:
+    def _enhance_question_with_context(self, question: str, session_id: str = None) -> str:
         """
         Mejora la pregunta del usuario con contexto sobre la base de datos y capacidades.
         """
+        from .session_manager import session_manager
+        
         web_search_status = "✅ Disponible" if self.web_search_tool else "❌ No disponible"
         
         # Obtener contexto específico de la base de datos si está habilitado
@@ -161,8 +168,15 @@ class InseguridadAlimentariaAgent:
         if self.settings.database_context.include_context_in_prompt:
             specific_context = self.settings.database_context.get_context_content()
         
+        # Obtener contexto de conversación previa si hay session_id
+        conversation_context = ""
+        if session_id:
+            conversation_context = session_manager.format_context_for_agent(session_id)
+        
         context = f"""
 Eres un analista experto en datos. Eres COMPLETAMENTE FLEXIBLE y DINÁMICO.
+
+{conversation_context}
 
 {specific_context if specific_context else ""}
 {"=" * 50 if specific_context else ""}
